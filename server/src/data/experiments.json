@@ -1,0 +1,454 @@
+[
+  {
+    "_id": "titration",
+    "title": "Acid-Base Titration",
+    "subject": "chemistry",
+    "difficulty": 3,
+    "description": "Determine the neutralization point of an acid using a known base, watching the indicator change colour.",
+    "estimatedTime": 25,
+    "availableChemicals": ["HCl", "NaOH", "Phenolphthalein", "Distilled water"],
+    "availableVariables": ["concentration", "volume", "temperature"],
+    "reactions": {
+      "HCl + NaOH": {
+        "products": ["NaCl", "H2O"],
+        "colorChange": {
+          "indicator": "phenolphthalein",
+          "fromColor": "#FF69B4",
+          "toColor": "clear"
+        },
+        "temperatureChange": 5,
+        "gasProduced": false,
+        "precipitate": false,
+        "pHChange": "increases toward 7",
+        "description": "Acid-base neutralization"
+      },
+      "HCl + Na2CO3": {
+        "products": ["NaCl", "H2O", "CO2"],
+        "colorChange": null,
+        "temperatureChange": 2,
+        "gasProduced": true,
+        "gasName": "CO2",
+        "precipitate": false,
+        "description": "Acid-carbonate reaction — bubbles form"
+      },
+      "AgNO3 + NaCl": {
+        "products": ["AgCl", "NaNO3"],
+        "colorChange": null,
+        "temperatureChange": 0,
+        "gasProduced": false,
+        "precipitate": true,
+        "precipitateColor": "#FFFFFF",
+        "description": "White precipitate forms (silver chloride)"
+      }
+    },
+    "steps": [
+      {
+        "stepNumber": 1,
+        "instruction": "Add 25 mL of HCl to the conical flask.",
+        "hint": "The acid is clear and will read a low pH on the meter."
+      },
+      {
+        "stepNumber": 2,
+        "instruction": "Add 3 drops of phenolphthalein indicator to the flask.",
+        "hint": "Phenolphthalein stays colourless in acid — that is expected."
+      },
+      {
+        "stepNumber": 3,
+        "instruction": "Fill the burette with 0.1M NaOH solution.",
+        "hint": "Record the starting volume so you can measure how much you add."
+      },
+      {
+        "stepNumber": 4,
+        "instruction": "Open the stopcock and add NaOH slowly to the flask.",
+        "hint": "Go drop-by-drop as you approach the colour change."
+      },
+      {
+        "stepNumber": 5,
+        "instruction": "Watch the pH meter and the indicator colour.",
+        "hint": "Near the endpoint the pH rises very quickly with each drop."
+      },
+      {
+        "stepNumber": 6,
+        "instruction": "Stop when the solution turns a faint, stable pink (the equivalence point).",
+        "hint": "Aim for pH 7.0 ± 0.2 and record the volume of NaOH used."
+      }
+    ],
+    "learningObjectives": [
+      "Understand acid-base neutralization",
+      "Identify the equivalence point of a titration",
+      "Read a pH meter and an indicator together",
+      "Practise precise, controlled reagent addition"
+    ],
+    "successCriteria": { "finalPH": { "min": 6.8, "max": 7.2 } }
+  },
+  {
+    "_id": "circuit",
+    "title": "Circuit Conductivity",
+    "subject": "physics",
+    "difficulty": 2,
+    "description": "Build a simple circuit and discover which materials conduct electricity to light the bulb.",
+    "estimatedTime": 20,
+    "availableChemicals": [],
+    "availableVariables": ["voltage", "resistance", "material"],
+    "reactions": {},
+    "steps": [
+      {
+        "stepNumber": 1,
+        "instruction": "Connect the battery to the bulb with two wires.",
+        "hint": "Electricity needs a complete loop to flow."
+      },
+      {
+        "stepNumber": 2,
+        "instruction": "Place a test material into the gap in the circuit.",
+        "hint": "Metals usually conduct; plastics and wood usually do not."
+      },
+      {
+        "stepNumber": 3,
+        "instruction": "Observe whether the bulb lights up.",
+        "hint": "A lit bulb means the material completed the circuit (a conductor)."
+      },
+      {
+        "stepNumber": 4,
+        "instruction": "Swap the material and compare brightness at different voltages.",
+        "hint": "Higher voltage pushes more current — but watch the resistance."
+      }
+    ],
+    "learningObjectives": [
+      "Understand what makes a complete electric circuit",
+      "Distinguish conductors from insulators",
+      "See how voltage and resistance affect current"
+    ],
+    "successCriteria": { "bulbLit": true }
+  },
+  {
+    "_id": "osmosis",
+    "title": "Cell Osmosis",
+    "subject": "biology",
+    "difficulty": 1,
+    "description": "Observe how water moves across a cell membrane between solutions of different concentration.",
+    "estimatedTime": 30,
+    "availableChemicals": ["Distilled water", "Salt solution", "Sugar solution"],
+    "availableVariables": ["concentration", "temperature", "time"],
+    "reactions": {},
+    "steps": [
+      {
+        "stepNumber": 1,
+        "instruction": "Place the model cell into a beaker of distilled water.",
+        "hint": "Distilled water has a lower solute concentration than the cell."
+      },
+      {
+        "stepNumber": 2,
+        "instruction": "Observe whether the cell swells or shrinks.",
+        "hint": "Water moves from low to high solute concentration through the membrane."
+      },
+      {
+        "stepNumber": 3,
+        "instruction": "Move the cell into a strong salt solution.",
+        "hint": "Now the outside is more concentrated than the inside — which way will water flow?"
+      },
+      {
+        "stepNumber": 4,
+        "instruction": "Compare the cell's size in each solution and explain why.",
+        "hint": "Hypotonic = swells, hypertonic = shrinks, isotonic = no change."
+      }
+    ],
+    "learningObjectives": [
+      "Understand osmosis across a semi-permeable membrane",
+      "Define hypotonic, hypertonic, and isotonic solutions",
+      "Predict the direction of water movement"
+    ],
+    "successCriteria": { "correctPredictions": 3 }
+  },
+  {
+    "_id": "indicators",
+    "title": "Indicators & the pH Scale",
+    "subject": "chemistry",
+    "difficulty": 2,
+    "description": "Add acids and bases to different indicators and watch the colours map onto the whole pH scale.",
+    "estimatedTime": 20,
+    "availableChemicals": ["HCl", "NaOH", "Sodium carbonate", "Universal indicator", "Litmus", "Phenolphthalein", "Distilled water"],
+    "availableVariables": ["concentration", "volume"],
+    "reactions": {
+      "HCl + Universal indicator": {
+        "products": ["colour change"],
+        "colorChange": { "indicator": "universal", "fromColor": "#3cb043", "toColor": "#e23b2a" },
+        "temperatureChange": 0,
+        "gasProduced": false,
+        "precipitate": false,
+        "description": "Universal indicator turns red in strong acid."
+      },
+      "NaOH + Universal indicator": {
+        "products": ["colour change"],
+        "colorChange": { "indicator": "universal", "fromColor": "#3cb043", "toColor": "#6a2fb0" },
+        "temperatureChange": 0,
+        "gasProduced": false,
+        "precipitate": false,
+        "description": "Universal indicator turns purple in strong alkali."
+      },
+      "HCl + Phenolphthalein": {
+        "products": ["no visible change"],
+        "colorChange": { "indicator": "phenolphthalein", "fromColor": "clear", "toColor": "clear" },
+        "temperatureChange": 0,
+        "gasProduced": false,
+        "precipitate": false,
+        "description": "Phenolphthalein stays colourless in acid."
+      },
+      "NaOH + Phenolphthalein": {
+        "products": ["colour change"],
+        "colorChange": { "indicator": "phenolphthalein", "fromColor": "clear", "toColor": "#e91e8c" },
+        "temperatureChange": 0,
+        "gasProduced": false,
+        "precipitate": false,
+        "description": "Phenolphthalein turns magenta-pink above pH 8.2."
+      }
+    },
+    "steps": [
+      { "stepNumber": 1, "instruction": "Add a few drops of universal indicator to the flask of water.", "hint": "In neutral water it should read green (pH 7)." },
+      { "stepNumber": 2, "instruction": "Pour in some hydrochloric acid and watch the colour.", "hint": "Acids drive the indicator toward red." },
+      { "stepNumber": 3, "instruction": "Reset, then add sodium hydroxide instead.", "hint": "Alkalis drive the indicator toward blue/purple." },
+      { "stepNumber": 4, "instruction": "Try litmus and phenolphthalein and compare their colour ranges.", "hint": "Each indicator changes over a different pH range." }
+    ],
+    "learningObjectives": [
+      "Relate indicator colours to the pH scale",
+      "Compare the ranges of universal indicator, litmus and phenolphthalein",
+      "Classify solutions as acidic, neutral or alkaline"
+    ],
+    "successCriteria": { "indicatorsTested": 3 }
+  },
+  {
+    "_id": "precipitation",
+    "title": "Precipitation Reactions",
+    "subject": "chemistry",
+    "difficulty": 3,
+    "description": "Mix soluble salts to form insoluble solids — watch coloured precipitates form and settle to the bottom.",
+    "estimatedTime": 25,
+    "availableChemicals": ["Copper sulfate", "Iron(III) chloride", "NaOH", "Silver nitrate", "Sodium chloride", "Distilled water"],
+    "availableVariables": ["concentration", "volume"],
+    "reactions": {
+      "Copper sulfate + NaOH": {
+        "products": ["Cu(OH)2", "Na2SO4"],
+        "colorChange": { "fromColor": "#1a7abf", "toColor": "#6aa8da" },
+        "temperatureChange": 1,
+        "gasProduced": false,
+        "precipitate": true,
+        "precipitateColor": "#6aa8da",
+        "description": "Pale blue copper(II) hydroxide precipitate forms."
+      },
+      "Iron(III) chloride + NaOH": {
+        "products": ["Fe(OH)3", "NaCl"],
+        "colorChange": { "fromColor": "#b8860b", "toColor": "#7a3d12" },
+        "temperatureChange": 1,
+        "gasProduced": false,
+        "precipitate": true,
+        "precipitateColor": "#7a3d12",
+        "description": "Red-brown iron(III) hydroxide precipitate forms."
+      },
+      "Silver nitrate + Sodium chloride": {
+        "products": ["AgCl", "NaNO3"],
+        "colorChange": null,
+        "temperatureChange": 0,
+        "gasProduced": false,
+        "precipitate": true,
+        "precipitateColor": "#f4f4f8",
+        "description": "White silver chloride precipitate forms."
+      }
+    },
+    "steps": [
+      { "stepNumber": 1, "instruction": "Pour copper sulfate solution into the flask.", "hint": "It is a clear, bright blue solution." },
+      { "stepNumber": 2, "instruction": "Add sodium hydroxide and watch for a solid forming.", "hint": "A pale blue precipitate of copper(II) hydroxide should appear." },
+      { "stepNumber": 3, "instruction": "Rinse, then try silver nitrate with sodium chloride.", "hint": "A white precipitate of silver chloride confirms chloride ions." },
+      { "stepNumber": 4, "instruction": "Let the precipitate settle and note its colour.", "hint": "Precipitate colour helps identify the metal ion." }
+    ],
+    "learningObjectives": [
+      "Understand precipitation as the formation of an insoluble solid",
+      "Identify metal ions by precipitate colour",
+      "Write the products of a double-displacement reaction"
+    ],
+    "successCriteria": { "precipitatesFormed": 2 }
+  },
+  {
+    "_id": "iodine-starch",
+    "title": "The Iodine–Starch Test",
+    "subject": "chemistry",
+    "difficulty": 1,
+    "description": "Use the classic test for starch: a milky-white suspension turns dramatic blue-black when iodine is added.",
+    "estimatedTime": 15,
+    "availableChemicals": ["Starch solution", "Iodine solution", "Distilled water"],
+    "availableVariables": ["volume"],
+    "reactions": {
+      "Iodine solution + Starch solution": {
+        "products": ["starch-iodine complex"],
+        "colorChange": { "fromColor": "#8B4513", "toColor": "#1a1a3e" },
+        "temperatureChange": 0,
+        "gasProduced": false,
+        "precipitate": false,
+        "description": "Amber iodine + milky starch turns intense blue-black."
+      }
+    },
+    "steps": [
+      { "stepNumber": 1, "instruction": "Pour the milky starch solution into the flask.", "hint": "Starch is a white, slightly opaque suspension." },
+      { "stepNumber": 2, "instruction": "Add a few drops of amber iodine solution.", "hint": "Watch the colour change immediately." },
+      { "stepNumber": 3, "instruction": "Observe the deep blue-black colour that develops.", "hint": "This colour confirms the presence of starch." }
+    ],
+    "learningObjectives": [
+      "Carry out the standard test for starch",
+      "Explain why iodine changes colour with starch",
+      "Recognise a positive result for a food test"
+    ],
+    "successCriteria": { "colorReached": "#1a1a3e" }
+  },
+  {
+    "_id": "catalysis-peroxide",
+    "title": "Catalysing Hydrogen Peroxide",
+    "subject": "chemistry",
+    "difficulty": 3,
+    "description": "Decompose hydrogen peroxide into water and oxygen. A catalyst speeds it up dramatically — and some combinations are hazardous.",
+    "estimatedTime": 20,
+    "availableChemicals": ["Hydrogen peroxide", "Manganese dioxide", "Potassium permanganate", "Distilled water"],
+    "availableVariables": ["volume", "temperature"],
+    "reactions": {
+      "Hydrogen peroxide + Manganese dioxide": {
+        "products": ["H2O", "O2"],
+        "colorChange": null,
+        "temperatureChange": 8,
+        "gasProduced": true,
+        "gasName": "O2",
+        "precipitate": false,
+        "description": "Manganese dioxide catalyses rapid decomposition into oxygen — frothy white foam and heat."
+      },
+      "Hydrogen peroxide + Potassium permanganate": {
+        "products": ["O2", "Mn2+"],
+        "colorChange": { "fromColor": "#6a0dad", "toColor": "clear" },
+        "temperatureChange": 18,
+        "gasProduced": true,
+        "gasName": "O2",
+        "precipitate": false,
+        "hazard": true,
+        "description": "Violent, strongly exothermic oxidation — handle with great care."
+      }
+    },
+    "steps": [
+      { "stepNumber": 1, "instruction": "Pour hydrogen peroxide into the flask.", "hint": "On its own it decomposes only slowly." },
+      { "stepNumber": 2, "instruction": "Add a little manganese dioxide catalyst.", "hint": "Watch the oxygen froth up as white foam and the temperature rise." },
+      { "stepNumber": 3, "instruction": "Note how a catalyst speeds the reaction without being used up.", "hint": "Do NOT mix peroxide with potassium permanganate — that combination is hazardous." }
+    ],
+    "learningObjectives": [
+      "Understand catalysis and decomposition reactions",
+      "Identify oxygen as the gas produced",
+      "Recognise exothermic reactions and unsafe combinations"
+    ],
+    "successCriteria": { "oxygenProduced": true }
+  },
+  {
+    "_id": "metal-acid",
+    "title": "Metals & Acids",
+    "subject": "chemistry",
+    "difficulty": 2,
+    "description": "React a reactive metal and a carbonate with acid, observing effervescence, heat and the gases produced.",
+    "estimatedTime": 20,
+    "availableChemicals": ["Magnesium ribbon", "Sodium carbonate", "HCl", "Distilled water"],
+    "availableVariables": ["concentration", "volume", "temperature"],
+    "reactions": {
+      "Magnesium ribbon + HCl": {
+        "products": ["MgCl2", "H2"],
+        "colorChange": null,
+        "temperatureChange": 9,
+        "gasProduced": true,
+        "gasName": "H2",
+        "precipitate": false,
+        "description": "Magnesium fizzes in acid, releasing hydrogen and heat (exothermic)."
+      },
+      "HCl + Sodium carbonate": {
+        "products": ["NaCl", "H2O", "CO2"],
+        "colorChange": null,
+        "temperatureChange": 2,
+        "gasProduced": true,
+        "gasName": "CO2",
+        "precipitate": false,
+        "description": "Acid on a carbonate fizzes, releasing carbon dioxide."
+      }
+    },
+    "steps": [
+      { "stepNumber": 1, "instruction": "Add a strip of magnesium ribbon to the flask.", "hint": "The metal is solid and shiny." },
+      { "stepNumber": 2, "instruction": "Pour in hydrochloric acid and watch the reaction.", "hint": "Bubbles of hydrogen form and the flask warms up." },
+      { "stepNumber": 3, "instruction": "Rinse, then try sodium carbonate with the acid.", "hint": "Carbonates fizz too — but the gas is carbon dioxide." },
+      { "stepNumber": 4, "instruction": "Compare the vigour and warmth of the two reactions.", "hint": "Metal + acid is more exothermic than carbonate + acid." }
+    ],
+    "learningObjectives": [
+      "Predict the products of metal + acid and carbonate + acid reactions",
+      "Identify hydrogen and carbon dioxide gases",
+      "Link effervescence and temperature rise to reaction type"
+    ],
+    "successCriteria": { "gasesIdentified": 2 }
+  },
+  {
+    "_id": "projectile",
+    "title": "Projectile Motion",
+    "subject": "physics",
+    "difficulty": 3,
+    "description": "Launch a projectile at different angles and speeds and hit a target using real kinematics equations.",
+    "estimatedTime": 25,
+    "availableChemicals": [],
+    "availableVariables": ["angle", "velocity", "gravity"],
+    "reactions": {},
+    "steps": [
+      { "stepNumber": 1, "instruction": "Set a launch angle and an initial velocity.", "hint": "Angle is measured from the ground; velocity is in metres per second." },
+      { "stepNumber": 2, "instruction": "Launch the projectile and watch its parabolic path.", "hint": "x = v₀·cosθ·t and y = v₀·sinθ·t − ½·g·t²." },
+      { "stepNumber": 3, "instruction": "Adjust angle and velocity to land in the target.", "hint": "Range = v₀²·sin(2θ)/g — small changes near 45° matter most." },
+      { "stepNumber": 4, "instruction": "Compare your attempts and find the angle for maximum range.", "hint": "For a fixed speed, which angle sends it furthest?" }
+    ],
+    "learningObjectives": [
+      "Apply the kinematic equations of projectile motion",
+      "Understand how launch angle and speed determine range",
+      "Discover that 45° gives the maximum range for a fixed speed"
+    ],
+    "successCriteria": { "targetHit": true }
+  },
+  {
+    "_id": "incline",
+    "title": "Forces on an Inclined Plane",
+    "subject": "physics",
+    "difficulty": 4,
+    "description": "Explore how weight, the normal force and friction balance on a ramp — and find the angle where a block begins to slide.",
+    "estimatedTime": 25,
+    "availableChemicals": [],
+    "availableVariables": ["angle", "friction", "surface"],
+    "reactions": {},
+    "steps": [
+      { "stepNumber": 1, "instruction": "Pick a surface and read its coefficient of friction.", "hint": "Rougher surfaces have a larger μ." },
+      { "stepNumber": 2, "instruction": "Slowly increase the ramp angle and watch the force vectors.", "hint": "Weight stays constant, but its components along and into the ramp change." },
+      { "stepNumber": 3, "instruction": "Find the angle where the block starts to slide.", "hint": "Sliding begins when mg·sinθ exceeds μ·mg·cosθ, i.e. tanθ > μ." },
+      { "stepNumber": 4, "instruction": "Try other surfaces and compare the slipping angles.", "hint": "A larger μ means the block can sit on a steeper ramp." }
+    ],
+    "learningObjectives": [
+      "Resolve weight into components on an inclined plane",
+      "Relate the normal force and friction to the slope angle",
+      "Predict the angle at which an object begins to slide"
+    ],
+    "successCriteria": { "blockSlid": true }
+  },
+  {
+    "_id": "pendulum",
+    "title": "Simple Pendulum",
+    "subject": "physics",
+    "difficulty": 2,
+    "description": "Investigate what controls a pendulum's period — length, gravity and amplitude — and confirm that mass does not.",
+    "estimatedTime": 20,
+    "availableChemicals": [],
+    "availableVariables": ["length", "angle", "mass", "gravity"],
+    "reactions": {},
+    "steps": [
+      { "stepNumber": 1, "instruction": "Set a string length and release angle, then watch it swing.", "hint": "The period is T = 2π·√(L/g)." },
+      { "stepNumber": 2, "instruction": "Change the bob mass and observe the period.", "hint": "Does a heavier bob swing slower? Check the timer." },
+      { "stepNumber": 3, "instruction": "Change the string length and re-time the period.", "hint": "Longer strings give longer periods (T grows with √L)." },
+      { "stepNumber": 4, "instruction": "Switch to Moon or Mars gravity and compare.", "hint": "Weaker gravity means a longer period." }
+    ],
+    "learningObjectives": [
+      "Use T = 2π·√(L/g) to predict a pendulum's period",
+      "Show experimentally that period is independent of mass",
+      "Describe how length and gravity affect the period",
+      "Track the exchange between kinetic and potential energy"
+    ],
+    "successCriteria": { "gravitiesCompared": 2 }
+  }
+]

@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Acid-Base Titration — StemLab</title>
+  <link rel="stylesheet" href="styles.css"/>
+  <style>
+    /* Lab page is full-height, no scroll */
+    html, body { height: 100%; overflow: hidden; }
+
+    .lab-wrapper {
+      height: calc(100vh - var(--nav-h));
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      grid-template-rows: 1fr 300px;
+      gap: 0;
+    }
+
+    /* ── Canvas area ── */
+    .lab-canvas-pane {
+      grid-row: 1; grid-column: 1;
+      background: #f0f4f8;
+      border-right: 1px solid var(--ink-20);
+      border-bottom: 1px solid var(--ink-20);
+      position: relative;
+      overflow: hidden;
+    }
+    .canvas-header {
+      position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px;
+      background: rgba(240,244,248,0.9);
+      backdrop-filter: blur(6px);
+      border-bottom: 1px solid var(--ink-20);
+    }
+    .canvas-header-left { display: flex; align-items: center; gap: 10px; }
+    .experiment-title { font-family: var(--font-mono); font-size: 0.9rem; font-weight: 500; }
+    .canvas-header-right { display: flex; align-items: center; gap: 8px; }
+    .timer {
+      font-family: var(--font-mono); font-size: 0.82rem;
+      color: var(--ink-60); padding: 4px 10px;
+      background: var(--white); border: 1px solid var(--ink-20);
+      border-radius: var(--radius-sm);
+    }
+
+    /* ── The actual simulation canvas ── */
+    #simCanvas {
+      width: 100%; height: 100%;
+      display: block;
+    }
+
+    /* ── Controls panel ── */
+    .lab-controls-pane {
+      grid-row: 1; grid-column: 2;
+      background: var(--white);
+      border-bottom: 1px solid var(--ink-20);
+      overflow-y: auto;
+      display: flex; flex-direction: column;
+    }
+    .controls-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--ink-20);
+      font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500;
+      color: var(--ink-60); text-transform: uppercase; letter-spacing: 0.08em;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .controls-body { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 20px; }
+
+    /* Chemicals list */
+    .chemicals-list { display: flex; flex-direction: column; gap: 8px; }
+    .chemical-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      border: 1.5px solid var(--ink-20);
+      border-radius: var(--radius-md);
+      cursor: pointer; transition: all 0.15s;
+      background: var(--surface);
+    }
+    .chemical-item:hover { border-color: var(--teal); background: var(--teal-10); }
+    .chemical-item.selected { border-color: var(--teal); background: var(--teal-10); }
+    .chemical-swatch {
+      width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0;
+      border: 1.5px solid rgba(0,0,0,0.1);
+    }
+    .chemical-name { font-size: 0.85rem; font-weight: 500; }
+    .chemical-conc { font-size: 0.75rem; font-family: var(--font-mono); color: var(--ink-60); margin-left: auto; }
+
+    /* Slider control */
+    .control-slider-group { display: flex; flex-direction: column; gap: 6px; }
+    .control-slider-label {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.82rem;
+    }
+    .control-slider-label span:first-child { font-weight: 500; }
+    .control-slider-label .val {
+      font-family: var(--font-mono); color: var(--teal);
+      background: var(--teal-10); padding: 2px 8px;
+      border-radius: 100px; font-size: 0.78rem;
+    }
+    input[type="range"] {
+      width: 100%; accent-color: var(--teal);
+      height: 4px; cursor: pointer;
+    }
+
+    /* Instrument readouts */
+    .readout-panel { display: flex; flex-direction: column; gap: 8px; }
+    .readout-item {
+      background: var(--surface);
+      border: 1px solid var(--ink-20);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .readout-label { font-size: 0.78rem; color: var(--ink-60); font-family: var(--font-mono); }
+    .readout-value {
+      font-family: var(--font-mono); font-size: 1.1rem; font-weight: 500;
+    }
+    .readout-value.ph-acid   { color: #e84040; }
+    .readout-value.ph-neutral { color: var(--success); }
+    .readout-value.ph-base   { color: #4338ca; }
+
+    /* Action buttons */
+    .lab-actions { display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding-top: 16px; border-top: 1px solid var(--ink-20); }
+
+    /* ── AI Tutor pane ── */
+    .lab-ai-pane {
+      grid-row: 2; grid-column: 1 / 3;
+      background: var(--white);
+      display: flex; flex-direction: column;
+      border-top: 1px solid var(--ink-20);
+    }
+    .ai-header {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--ink-20);
+      display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+    }
+    .ai-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--teal-10); color: var(--teal-dark);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; flex-shrink: 0;
+    }
+    .ai-name { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 500; }
+    .ai-status { font-size: 0.75rem; color: var(--ink-60); display: flex; align-items: center; gap: 4px; }
+    .ai-status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); animation: pulse 1.5s infinite; }
+
+    .ai-messages {
+      flex: 1; overflow-y: auto; padding: 12px 16px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .ai-msg {
+      display: flex; gap: 8px; align-items: flex-start;
+    }
+    .ai-msg.user { flex-direction: row-reverse; }
+    .ai-msg-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.85rem; flex-shrink: 0; margin-top: 2px;
+    }
+    .ai-msg-avatar.tutor { background: var(--teal-10); }
+    .ai-msg-avatar.student { background: var(--ink); color: var(--acid); font-family: var(--font-mono); font-size: 0.65rem; }
+    .ai-msg-bubble {
+      max-width: 70%; padding: 10px 14px;
+      border-radius: var(--radius-md);
+      font-size: 0.88rem; line-height: 1.55;
+    }
+    .ai-msg.tutor .ai-msg-bubble  { background: var(--surface); color: var(--ink); border-radius: 4px 12px 12px 12px; }
+    .ai-msg.user  .ai-msg-bubble  { background: var(--teal); color: var(--white); border-radius: 12px 4px 12px 12px; }
+    .ai-msg-time { font-size: 0.7rem; color: var(--ink-60); margin-top: 4px; align-self: flex-end; }
+
+    /* Typing indicator */
+    .typing-indicator { display: flex; gap: 4px; align-items: center; padding: 10px 14px; }
+    .typing-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--ink-60); animation: typingBounce 1.2s infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.15s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes typingBounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+
+    .ai-input-bar {
+      padding: 10px 12px;
+      border-top: 1px solid var(--ink-20);
+      display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+    }
+    .ai-input {
+      flex: 1; padding: 9px 14px;
+      background: var(--surface);
+      border: 1.5px solid var(--ink-20);
+      border-radius: 100px; font-size: 0.88rem;
+      outline: none; transition: border-color 0.15s;
+    }
+    .ai-input:focus { border-color: var(--teal); }
+    .ai-send-btn {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--teal); color: var(--white);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem; flex-shrink: 0;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .ai-send-btn:hover { background: var(--teal-dark); }
+    .ai-send-btn:active { transform: scale(0.92); }
+
+    /* Suggested questions */
+    .suggested-questions { padding: 0 12px 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+    .suggested-q {
+      font-size: 0.78rem; padding: 5px 10px;
+      background: var(--surface); border: 1px solid var(--ink-20);
+      border-radius: 100px; cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      color: var(--ink-60);
+    }
+    .suggested-q:hover { border-color: var(--teal); background: var(--teal-10); color: var(--teal-dark); }
+
+    /* Steps progress (overlay on canvas) */
+    .steps-overlay {
+      position: absolute; bottom: 16px; left: 16px; right: 16px;
+      z-index: 10;
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--ink-20);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+    }
+    .steps-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .steps-label { font-family: var(--font-mono); font-size: 0.75rem; font-weight: 500; color: var(--ink-60); }
+    .steps-count { font-family: var(--font-mono); font-size: 0.75rem; color: var(--teal); }
+    .steps-bar { display: flex; gap: 5px; margin-bottom: 10px; }
+    .step-seg {
+      height: 4px; flex: 1; border-radius: 2px;
+      background: var(--ink-20); transition: background 0.4s;
+    }
+    .step-seg.done   { background: var(--acid); }
+    .step-seg.active { background: var(--teal); }
+    .current-step-text { font-size: 0.85rem; color: var(--ink); font-weight: 500; }
+
+    /* Mobile adjustments */
+    @media (max-width: 900px) {
+      html, body { overflow: auto; }
+      .lab-wrapper {
+        height: auto;
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+      }
+      .lab-canvas-pane {
+        grid-row: 1; grid-column: 1;
+        height: 55vw; min-height: 280px;
+      }
+      .lab-controls-pane {
+        grid-row: 2; grid-column: 1;
+        border-right: none;
+        border-top: 1px solid var(--ink-20);
+        max-height: 360px;
+      }
+      .lab-ai-pane {
+        grid-row: 3; grid-column: 1;
+        height: 380px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container nav-inner">
+    <a href="labs.html" class="nav-logo" style="gap:8px">
+      <span style="color:var(--ink-60);font-size:0.85rem">← Back</span>
+    </a>
+    <div class="flex items-center gap-12">
+      <div class="step-dots">
+        <div class="step-dot done" id="navDot1"></div>
+        <div class="step-dot done" id="navDot2"></div>
+        <div class="step-dot active" id="navDot3"></div>
+        <div class="step-dot" id="navDot4"></div>
+        <div class="step-dot" id="navDot5"></div>
+        <div class="step-dot" id="navDot6"></div>
+      </div>
+      <span class="text-sm text-muted hide-mobile">Step 3 of 6</span>
+    </div>
+    <div class="flex items-center gap-8">
+      <span class="tag tag-teal">Chemistry</span>
+      <button class="btn btn-ghost btn-sm" onclick="showHint()">💡 Hint</button>
+    </div>
+  </div>
+</nav>
+
+<div class="lab-wrapper">
+
+  <!-- ── Canvas pane ── -->
+  <div class="lab-canvas-pane">
+    <div class="canvas-header">
+      <div class="canvas-header-left">
+        <span class="experiment-title">Acid-Base Titration</span>
+        <span class="tag tag-teal">Step 3: Add indicator</span>
+      </div>
+      <div class="canvas-header-right">
+        <span class="timer" id="timer">⏱ 08:24</span>
+        <button class="btn btn-ghost btn-sm btn-icon" title="Reset experiment" onclick="resetExperiment()">↺</button>
+        <button class="btn btn-ghost btn-sm btn-icon hide-mobile" title="Fullscreen">⛶</button>
+      </div>
+    </div>
+
+    <!-- Simulation canvas — P5.js draws here in React version -->
+    <canvas id="simCanvas"></canvas>
+
+    <!-- Step progress overlay -->
+    <div class="steps-overlay">
+      <div class="steps-header">
+        <span class="steps-label">Progress</span>
+        <span class="steps-count">Step 3 / 6</span>
+      </div>
+      <div class="steps-bar">
+        <div class="step-seg done"></div>
+        <div class="step-seg done"></div>
+        <div class="step-seg active"></div>
+        <div class="step-seg"></div>
+        <div class="step-seg"></div>
+        <div class="step-seg"></div>
+      </div>
+      <div class="current-step-text">Add 3 drops of phenolphthalein indicator to the flask</div>
+    </div>
+  </div>
+
+  <!-- ── Controls pane ── -->
+  <div class="lab-controls-pane">
+    <div class="controls-header">
+      <span>Controls</span>
+      <button class="btn btn-ghost btn-sm" style="font-size:0.75rem;padding:4px 8px" onclick="resetExperiment()">Reset</button>
+    </div>
+    <div class="controls-body">
+
+      <!-- Chemicals -->
+      <div>
+        <div class="text-xs font-medium" style="color:var(--ink-60);margin-bottom:8px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.08em">Available chemicals</div>
+        <div class="chemicals-list">
+          <div class="chemical-item" onclick="selectChemical(this,'HCl')" title="Click then click the flask to add">
+            <div class="chemical-swatch" style="background:#b3d9ff"></div>
+            <span class="chemical-name">Hydrochloric Acid</span>
+            <span class="chemical-conc">0.1M</span>
+          </div>
+          <div class="chemical-item" onclick="selectChemical(this,'NaOH')">
+            <div class="chemical-swatch" style="background:#d0f0e0"></div>
+            <span class="chemical-name">Sodium Hydroxide</span>
+            <span class="chemical-conc">0.1M</span>
+          </div>
+          <div class="chemical-item" onclick="selectChemical(this,'Phenolphthalein')">
+            <div class="chemical-swatch" style="background:#ffd0f0"></div>
+            <span class="chemical-name">Phenolphthalein</span>
+            <span class="chemical-conc">indicator</span>
+          </div>
+          <div class="chemical-item" onclick="selectChemical(this,'H2O')">
+            <div class="chemical-swatch" style="background:#e8f4ff"></div>
+            <span class="chemical-name">Distilled Water</span>
+            <span class="chemical-conc">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Burette flow rate -->
+      <div class="control-slider-group">
+        <div class="control-slider-label">
+          <span>Burette flow rate</span>
+          <span class="val" id="flowVal">1 drop/s</span>
+        </div>
+        <input type="range" min="1" max="10" value="1" id="flowRate" oninput="updateFlow(this.value)" aria-label="Burette flow rate"/>
+        <div class="form-hint" style="margin-top:2px">Slow = more precise near endpoint</div>
+      </div>
+
+      <!-- Temperature -->
+      <div class="control-slider-group">
+        <div class="control-slider-label">
+          <span>Temperature</span>
+          <span class="val" id="tempVal">25 °C</span>
+        </div>
+        <input type="range" min="10" max="60" value="25" id="tempControl" oninput="updateTemp(this.value)" aria-label="Temperature"/>
+      </div>
+
+      <!-- Live readouts -->
+      <div>
+        <div class="text-xs font-medium" style="color:var(--ink-60);margin-bottom:8px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.08em">Instruments</div>
+        <div class="readout-panel">
+          <div class="readout-item">
+            <span class="readout-label">pH Meter</span>
+            <span class="readout-value ph-acid" id="phReadout">2.8</span>
+          </div>
+          <div class="readout-item">
+            <span class="readout-label">Temperature</span>
+            <span class="readout-value" id="tempReadout">25.0 °C</span>
+          </div>
+          <div class="readout-item">
+            <span class="readout-label">Volume added</span>
+            <span class="readout-value" id="volReadout">0.0 mL</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="lab-actions">
+        <button class="btn btn-teal btn-full" onclick="runStep()">▶ Run / Pour</button>
+        <button class="btn btn-outline btn-full btn-sm" onclick="resetExperiment()">↺ Reset experiment</button>
+        <a href="results.html" class="btn btn-primary btn-full btn-sm">Finish & submit</a>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── AI Tutor pane ── -->
+  <div class="lab-ai-pane">
+    <div class="ai-header">
+      <div class="ai-avatar">🧑‍🔬</div>
+      <div>
+        <div class="ai-name">Dr. Kwame</div>
+        <div class="ai-status"><div class="ai-status-dot"></div> AI Tutor · watching your experiment</div>
+      </div>
+      <button class="btn btn-ghost btn-sm btn-icon" style="margin-left:auto" title="Minimize chat" onclick="toggleChat()">⌄</button>
+    </div>
+
+    <div class="ai-messages" id="aiMessages">
+      <div class="ai-msg tutor">
+        <div class="ai-msg-avatar tutor">🧑‍🔬</div>
+        <div>
+          <div class="ai-msg-bubble">
+            Good work so far! You've added the HCl to the flask. Now you need to add the indicator — phenolphthalein. It will help you see when the neutralization is complete. Why do you think we add the indicator before the NaOH?
+          </div>
+          <div class="ai-msg-time">08:20</div>
+        </div>
+      </div>
+      <div class="ai-msg user">
+        <div class="ai-msg-avatar student">AO</div>
+        <div>
+          <div class="ai-msg-bubble">Because we need to see when the colour changes?</div>
+          <div class="ai-msg-time">08:22</div>
+        </div>
+      </div>
+      <div class="ai-msg tutor">
+        <div class="ai-msg-avatar tutor">🧑‍🔬</div>
+        <div>
+          <div class="ai-msg-bubble">
+            Exactly! The indicator changes colour when the pH reaches the equivalence point. For phenolphthalein, it turns pink above pH 8.2. Now — select phenolphthalein from the chemicals panel and click the flask to add it.
+          </div>
+          <div class="ai-msg-time">08:22</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Suggested quick questions -->
+    <div class="suggested-questions" id="suggestions">
+      <button class="suggested-q" onclick="sendSuggested(this)">Why phenolphthalein?</button>
+      <button class="suggested-q" onclick="sendSuggested(this)">What is the equivalence point?</button>
+      <button class="suggested-q" onclick="sendSuggested(this)">I made a mistake</button>
+    </div>
+
+    <div class="ai-input-bar">
+      <input type="text" class="ai-input" id="aiInput" placeholder="Ask Dr. Kwame anything…" onkeydown="if(event.key==='Enter')sendMessage()" aria-label="Message AI tutor"/>
+      <button class="ai-send-btn" onclick="sendMessage()" aria-label="Send message">→</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Timer ──
+let seconds = 504; // 8:24
+setInterval(() => {
+  seconds++;
+  const m = String(Math.floor(seconds/60)).padStart(2,'0');
+  const s = String(seconds%60).padStart(2,'0');
+  document.getElementById('timer').textContent = `⏱ ${m}:${s}`;
+}, 1000);
+
+// ── Controls ──
+function updateFlow(val) {
+  document.getElementById('flowVal').textContent = val + ' drop/s';
+}
+function updateTemp(val) {
+  document.getElementById('tempVal').textContent = val + ' °C';
+  document.getElementById('tempReadout').textContent = val + '.0 °C';
+}
+
+// ── Chemical selection ──
+let selected = null;
+function selectChemical(el, name) {
+  document.querySelectorAll('.chemical-item').forEach(i => i.classList.remove('selected'));
+  el.classList.add('selected');
+  selected = name;
+}
+
+// ── Dummy simulation ──
+let ph = 2.8, vol = 0;
+function runStep() {
+  if (!selected) { addAIMessage("tutor","Select a chemical first from the panel — click on it."); return; }
+  if (selected === 'NaOH') {
+    vol += 1.5;
+    ph = Math.min(12.5, ph + 0.4 + Math.random() * 0.3);
+  }
+  document.getElementById('phReadout').textContent = ph.toFixed(1);
+  document.getElementById('volReadout').textContent = vol.toFixed(1) + ' mL';
+  const el = document.getElementById('phReadout');
+  el.className = 'readout-value ' + (ph < 6 ? 'ph-acid' : ph > 8 ? 'ph-base' : 'ph-neutral');
+  updateCanvas();
+}
+
+// ── Canvas drawing (placeholder — replace with P5.js in React) ──
+function updateCanvas() {
+  const canvas = document.getElementById('simCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+
+  // Background
+  ctx.fillStyle = '#f0f4f8';
+  ctx.fillRect(0,0,w,h);
+
+  // Burette (top center)
+  const bx = w/2 - 15, by = 60, bw = 30, bh = h * 0.35;
+  ctx.strokeStyle = '#0A0F1E'; ctx.lineWidth = 2.5;
+  ctx.strokeRect(bx, by, bw, bh);
+  // NaOH in burette
+  ctx.fillStyle = 'rgba(0,180,160,0.3)';
+  ctx.fillRect(bx+1.5, by+1.5, bw-3, (bh-3)*0.6);
+  // Stopcock
+  ctx.fillStyle = '#0A0F1E';
+  ctx.fillRect(bx-8, by+bh-10, bw+16, 8);
+  ctx.fillStyle = '#fff';
+  ctx.font = '11px DM Mono, monospace';
+  ctx.fillStyle = 'rgba(10,15,30,0.4)';
+  ctx.textAlign = 'center';
+  ctx.fillText('NaOH 0.1M', w/2, by - 12);
+
+  // Flask (conical)
+  const fx = w/2, fy = by + bh + 60, fw = 100, fh = 110;
+  ctx.beginPath();
+  ctx.moveTo(fx - 15, fy);
+  ctx.lineTo(fx - fw/2, fy + fh);
+  ctx.quadraticCurveTo(fx, fy + fh + 20, fx + fw/2, fy + fh);
+  ctx.lineTo(fx + 15, fy);
+  ctx.closePath();
+  ctx.strokeStyle = '#0A0F1E'; ctx.lineWidth = 2.5;
+  ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.fill();
+
+  // Liquid in flask — color based on pH
+  let liquidColor;
+  if (ph < 6) liquidColor = 'rgba(200,230,255,0.7)';
+  else if (ph < 8) liquidColor = 'rgba(255,230,200,0.7)';
+  else liquidColor = 'rgba(255,120,200,0.65)'; // pink at equivalence
+  ctx.beginPath();
+  ctx.moveTo(fx - 60, fy + fh * 0.4);
+  ctx.lineTo(fx - fw/2 + 4, fy + fh);
+  ctx.quadraticCurveTo(fx, fy + fh + 18, fx + fw/2 - 4, fy + fh);
+  ctx.lineTo(fx + 60, fy + fh * 0.4);
+  ctx.closePath();
+  ctx.fillStyle = liquidColor; ctx.fill();
+
+  // Flask neck
+  ctx.strokeStyle = '#0A0F1E'; ctx.lineWidth = 2;
+  ctx.strokeRect(fx - 15, fy - 20, 30, 24);
+
+  // pH meter probe
+  ctx.strokeStyle = '#f0a500'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(fx + fw/2 - 20, fy + 20); ctx.lineTo(fx + fw/2 - 10, fy + fh * 0.6); ctx.stroke();
+  ctx.fillStyle = '#f0a500'; ctx.beginPath(); ctx.arc(fx + fw/2 - 10, fy + fh * 0.6, 5, 0, Math.PI*2); ctx.fill();
+
+  // pH display
+  ctx.fillStyle = '#0A0F1E';
+  ctx.font = 'bold 13px DM Mono, monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('pH: ' + ph.toFixed(1), fx + fw/2 + 10, fy + fh * 0.6 + 5);
+
+  // Volume line
+  ctx.fillStyle = 'rgba(10,15,30,0.35)'; ctx.font = '11px DM Mono, monospace';
+  ctx.fillText('Vol: ' + vol.toFixed(1) + 'mL', fx - fw/2 - 70, fy + fh * 0.5);
+}
+
+// Initial draw
+window.addEventListener('load', () => { updateCanvas(); });
+window.addEventListener('resize', () => { updateCanvas(); });
+
+// ── Reset ──
+function resetExperiment() {
+  ph = 2.8; vol = 0;
+  document.getElementById('phReadout').textContent = '2.8';
+  document.getElementById('phReadout').className = 'readout-value ph-acid';
+  document.getElementById('volReadout').textContent = '0.0 mL';
+  updateCanvas();
+  addAIMessage('tutor', 'Experiment reset. Let\'s try again — remember, add the chemicals slowly and watch the pH meter carefully.');
+}
+
+// ── AI chat ──
+function addAIMessage(role, text) {
+  const container = document.getElementById('aiMessages');
+  const now = new Date();
+  const time = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  const avatar = role === 'tutor' ? '<div class="ai-msg-avatar tutor">🧑‍🔬</div>' : '<div class="ai-msg-avatar student">AO</div>';
+  const div = document.createElement('div');
+  div.className = `ai-msg ${role}`;
+  div.innerHTML = `${role === 'student' ? avatar : ''}
+    <div>
+      <div class="ai-msg-bubble">${text}</div>
+      <div class="ai-msg-time">${time}</div>
+    </div>
+    ${role === 'tutor' ? avatar : ''}`;
+  // Fix order for tutor (avatar first)
+  if (role === 'tutor') { div.innerHTML = `${avatar}<div><div class="ai-msg-bubble">${text}</div><div class="ai-msg-time">${time}</div></div>`; }
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function sendMessage() {
+  const input = document.getElementById('aiInput');
+  const text = input.value.trim();
+  if (!text) return;
+  addAIMessage('student', text);
+  input.value = '';
+  // Show typing indicator
+  const typing = document.createElement('div');
+  typing.id = 'typingDots'; typing.className = 'ai-msg tutor';
+  typing.innerHTML = '<div class="ai-msg-avatar tutor">🧑‍🔬</div><div class="ai-msg-bubble typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
+  document.getElementById('aiMessages').appendChild(typing);
+  document.getElementById('aiMessages').scrollTop = 99999;
+  // Simulate AI response (replace with real API call)
+  const responses = [
+    "Great question! The phenolphthalein works as a visual indicator — it's colourless in acidic conditions and turns pink when the solution becomes basic (above pH 8.2). This colour change tells you the neutralization reaction is complete.",
+    "Try adding the NaOH very slowly — one drop at a time. The closer you get to pH 7, the more sensitive the reaction becomes.",
+    "That's the equivalence point — the exact moment where moles of acid equal moles of base. Your pH should be very close to 7.0 there.",
+    "Good observation! The temperature increase is from the exothermic neutralization reaction. H⁺ and OH⁻ ions release energy when they combine to form water."
+  ];
+  setTimeout(() => {
+    document.getElementById('typingDots')?.remove();
+    addAIMessage('tutor', responses[Math.floor(Math.random() * responses.length)]);
+    document.getElementById('aiMessages').scrollTop = 99999;
+  }, 1600);
+}
+
+function sendSuggested(el) {
+  document.getElementById('aiInput').value = el.textContent;
+  sendMessage();
+}
+
+function showHint() { addAIMessage('tutor', '💡 Hint: Select phenolphthalein from the chemicals panel, then click the flask icon to add it. Only 3 drops are needed.'); }
+
+function toggleChat() {
+  const msgs = document.getElementById('aiMessages');
+  msgs.style.display = msgs.style.display === 'none' ? 'flex' : 'none';
+}
+</script>
+</body>
+</html>

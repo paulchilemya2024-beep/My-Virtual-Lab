@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Experiment Results — StemLab</title>
+  <link rel="stylesheet" href="styles.css"/>
+  <style>
+    .results-page { min-height: calc(100vh - var(--nav-h)); background: var(--surface); padding: 40px 0 80px; }
+
+    /* ── Score hero ── */
+    .score-hero {
+      background: var(--ink);
+      border-radius: var(--radius-xl);
+      padding: 48px 40px;
+      text-align: center;
+      margin-bottom: 28px;
+      position: relative; overflow: hidden;
+    }
+    .score-hero::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(200,241,53,0.12), transparent 60%);
+    }
+    .score-confetti { font-size: 2rem; margin-bottom: 16px; }
+    .score-title { color: var(--white); font-family: var(--font-mono); font-size: 1rem; font-weight: 500; margin-bottom: 20px; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.1em; }
+    .score-circle {
+      width: 140px; height: 140px;
+      border: 4px solid var(--acid);
+      border-radius: 50%;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+      position: relative; z-index: 1;
+    }
+    .score-number { font-family: var(--font-mono); font-size: 3rem; font-weight: 500; color: var(--acid); line-height: 1; }
+    .score-denom  { font-family: var(--font-mono); font-size: 0.9rem; color: rgba(255,255,255,0.4); }
+    .score-label  { color: rgba(255,255,255,0.7); font-size: 0.95rem; }
+    .score-grade  { font-family: var(--font-mono); color: var(--acid); font-size: 1.1rem; font-weight: 500; margin-top: 8px; }
+    .score-meta { display: flex; justify-content: center; gap: 32px; margin-top: 24px; position: relative; z-index: 1; }
+    .score-meta-item { text-align: center; }
+    .score-meta-num   { font-family: var(--font-mono); font-size: 1.3rem; font-weight: 500; color: var(--white); }
+    .score-meta-label { font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-top: 2px; }
+
+    /* ── Two-column layout ── */
+    .results-cols { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+
+    /* ── Feedback sections ── */
+    .feedback-card {
+      background: var(--white);
+      border: 1px solid var(--ink-20);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .feedback-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--ink-20);
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--font-mono); font-size: 0.85rem; font-weight: 500;
+    }
+    .feedback-header.success { background: rgba(0,180,101,0.06); }
+    .feedback-header.warning { background: rgba(240,165,0,0.06); }
+    .feedback-header.info    { background: rgba(0,180,160,0.06); }
+    .feedback-list { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+    .feedback-item { display: flex; align-items: flex-start; gap: 10px; }
+    .feedback-icon { font-size: 0.9rem; margin-top: 2px; flex-shrink: 0; }
+    .feedback-text { font-size: 0.88rem; line-height: 1.55; color: var(--ink); }
+    .feedback-tip  { font-size: 0.8rem; color: var(--ink-60); margin-top: 3px; font-style: italic; }
+
+    /* ── Mistake log ── */
+    .mistake-item {
+      background: rgba(240,165,0,0.06);
+      border: 1px solid rgba(240,165,0,0.2);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      margin-bottom: 8px;
+    }
+    .mistake-item h5 { font-size: 0.85rem; font-weight: 500; color: var(--ink); margin-bottom: 4px; }
+    .mistake-item p  { font-size: 0.82rem; color: var(--ink-60); }
+    .mistake-count { font-family: var(--font-mono); font-size: 0.75rem; color: var(--warn); background: rgba(240,165,0,0.12); padding: 2px 8px; border-radius: 100px; }
+
+    /* ── XP earned ── */
+    .xp-earned-card {
+      background: var(--ink);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .xp-earned-num { font-family: var(--font-mono); font-size: 2.5rem; font-weight: 500; color: var(--acid); }
+    .xp-earned-label { color: rgba(255,255,255,0.5); font-size: 0.85rem; margin-top: 4px; }
+    .xp-breakdown { margin-top: 16px; display: flex; flex-direction: column; gap: 6px; }
+    .xp-line { display: flex; justify-content: space-between; font-size: 0.8rem; }
+    .xp-line span:first-child { color: rgba(255,255,255,0.5); }
+    .xp-line span:last-child  { font-family: var(--font-mono); color: var(--acid); }
+
+    /* ── New badge ── */
+    .badge-earned {
+      background: var(--white); border: 1px solid var(--ink-20);
+      border-radius: var(--radius-lg); padding: 20px;
+      text-align: center; margin-bottom: 16px;
+    }
+    .badge-earned-emoji { font-size: 2.5rem; margin-bottom: 8px; animation: badgePop 0.5s ease; }
+    @keyframes badgePop { 0%{transform:scale(0)} 80%{transform:scale(1.15)} 100%{transform:scale(1)} }
+    .badge-earned h4 { font-family: var(--font-mono); margin-bottom: 4px; }
+    .badge-earned p  { font-size: 0.82rem; color: var(--ink-60); }
+
+    /* ── Action buttons ── */
+    .action-row { display: flex; flex-direction: column; gap: 10px; }
+
+    /* ── AI debrief ── */
+    .ai-debrief {
+      background: var(--surface-2);
+      border: 1px solid var(--ink-20);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .ai-debrief-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .ai-debrief-header h4 { font-family: var(--font-mono); font-size: 0.9rem; }
+    .ai-debrief p { font-size: 0.88rem; line-height: 1.6; color: var(--ink-60); }
+
+    @media (max-width: 768px) {
+      .results-cols { grid-template-columns: 1fr; }
+      .score-hero { padding: 32px 20px; }
+      .score-meta { gap: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container nav-inner">
+    <a href="dashboard.html" class="nav-logo" style="gap:8px">
+      <span style="color:var(--ink-60);font-size:0.85rem">← Dashboard</span>
+    </a>
+    <div class="nav-links">
+      <a href="labs.html" class="btn btn-outline btn-sm">Browse more labs</a>
+    </div>
+  </div>
+</nav>
+
+<div class="results-page">
+  <div class="container-sm">
+
+    <!-- Score hero -->
+    <div class="score-hero">
+      <div class="score-confetti">🎉</div>
+      <div class="score-title">Acid-Base Titration — Complete</div>
+      <div class="score-circle">
+        <div class="score-number">91</div>
+        <div class="score-denom">/100</div>
+      </div>
+      <div class="score-label">Excellent work</div>
+      <div class="score-grade">Grade: A</div>
+      <div class="score-meta">
+        <div class="score-meta-item">
+          <div class="score-meta-num">22</div>
+          <div class="score-meta-label">minutes</div>
+        </div>
+        <div class="score-meta-item">
+          <div class="score-meta-num">3</div>
+          <div class="score-meta-label">mistakes</div>
+        </div>
+        <div class="score-meta-item">
+          <div class="score-meta-num">6/6</div>
+          <div class="score-meta-label">steps done</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="results-cols">
+
+      <!-- Left: Feedback -->
+      <div>
+
+        <!-- What went well -->
+        <div class="feedback-card">
+          <div class="feedback-header success">
+            <span>✅</span> What went well
+          </div>
+          <div class="feedback-list">
+            <div class="feedback-item">
+              <span class="feedback-icon">✅</span>
+              <div>
+                <div class="feedback-text">Correct equivalence point identified — your final pH of 7.1 was within the target range (6.8–7.2).</div>
+              </div>
+            </div>
+            <div class="feedback-item">
+              <span class="feedback-icon">✅</span>
+              <div>
+                <div class="feedback-text">Phenolphthalein indicator used correctly — you added the right amount before starting the titration.</div>
+              </div>
+            </div>
+            <div class="feedback-item">
+              <span class="feedback-icon">✅</span>
+              <div>
+                <div class="feedback-text">You slowed the NaOH flow rate near pH 6 — exactly the right instinct. That's what gives precision.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- What to improve -->
+        <div class="feedback-card">
+          <div class="feedback-header warning">
+            <span>⚠️</span> What to work on
+          </div>
+          <div class="feedback-list">
+            <div class="feedback-item">
+              <span class="feedback-icon">⚠️</span>
+              <div>
+                <div class="feedback-text">You added NaOH too quickly 3 times, overshooting the equivalence point each time.</div>
+                <div class="feedback-tip">💡 Tip: Drop your flow rate to 1–2 drops/s when pH reaches 5.5. The reaction becomes very sensitive from pH 6 onwards.</div>
+              </div>
+            </div>
+            <div class="feedback-item">
+              <span class="feedback-icon">⚠️</span>
+              <div>
+                <div class="feedback-text">Temperature was kept at 25°C throughout, but you didn't record initial and final readings — good habit to build.</div>
+                <div class="feedback-tip">💡 Tip: Temperature changes indicate exothermic reactions. Always note the delta.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI debrief -->
+        <div class="ai-debrief">
+          <div class="ai-debrief-header">
+            <div class="avatar avatar-sm" style="background:var(--teal-10);color:var(--teal-dark)">🧑‍🔬</div>
+            <h4>Dr. Kwame's debrief</h4>
+          </div>
+          <p>You showed real scientific thinking today — slowing down near the endpoint was the key move. The 3 overshoots all happened in the early stages before you built confidence. In your next titration, try setting the flow rate to 1 drop/second from the very beginning. Your understanding of the indicator chemistry was clear. Ready for a harder one?</p>
+        </div>
+
+        <!-- Mistake log -->
+        <div>
+          <div class="section-header" style="margin-bottom:12px">
+            <span class="section-title">Mistake log</span>
+            <span class="tag tag-warn">3 mistakes</span>
+          </div>
+          <div class="mistake-item">
+            <div class="flex justify-between items-center mb-8">
+              <h5>Added NaOH too fast</h5>
+              <span class="mistake-count">×3</span>
+            </div>
+            <p>Flow rate was at 8 drops/s when pH was between 4–6. This caused pH to jump past the equivalence point. −9 points total.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right: XP, badge, actions -->
+      <div>
+
+        <!-- XP earned -->
+        <div class="xp-earned-card">
+          <div class="xp-earned-num">+75 XP</div>
+          <div class="xp-earned-label">earned this session</div>
+          <div class="xp-breakdown">
+            <div class="xp-line"><span>Completed experiment</span><span>+50</span></div>
+            <div class="xp-line"><span>High score (91+)</span><span>+20</span></div>
+            <div class="xp-line"><span>First completion bonus</span><span>+5</span></div>
+          </div>
+        </div>
+
+        <!-- Badge earned -->
+        <div class="badge-earned">
+          <div class="badge-earned-emoji">🏅</div>
+          <h4>New badge!</h4>
+          <div class="tag tag-acid" style="margin:6px auto 8px;display:inline-flex">First Experiment</div>
+          <p>You completed your first experiment on StemLab. Your scientific journey has begun.</p>
+        </div>
+
+        <!-- Actions -->
+        <div class="action-row">
+          <a href="lab.html?id=acid-base-titration" class="btn btn-outline w-full">
+            ↺ Try again — beat 91
+          </a>
+          <a href="labs.html" class="btn btn-teal w-full">
+            Next experiment →
+          </a>
+          <a href="dashboard.html" class="btn btn-ghost w-full">
+            Back to dashboard
+          </a>
+        </div>
+
+        <!-- Share score -->
+        <div style="margin-top:16px;text-align:center">
+          <button class="btn btn-ghost btn-sm" onclick="shareResult()" style="color:var(--ink-60);font-size:0.8rem">
+            📤 Share your score
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<script>
+function shareResult() {
+  const text = 'I just scored 91/100 on the Acid-Base Titration experiment on StemLab! 🧪⭐ Try it free at stemlab.app';
+  if (navigator.share) {
+    navigator.share({ text, url: window.location.href });
+  } else {
+    navigator.clipboard.writeText(text).then(() => {
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.innerHTML = '✓ Score copied to clipboard';
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 2800);
+    });
+  }
+}
+
+// Animate score circle on load
+window.addEventListener('load', () => {
+  const num = document.querySelector('.score-number');
+  let count = 0;
+  const target = 91;
+  const interval = setInterval(() => {
+    count += 3;
+    if (count >= target) { count = target; clearInterval(interval); }
+    num.textContent = count;
+  }, 20);
+});
+</script>
+</body>
+</html>

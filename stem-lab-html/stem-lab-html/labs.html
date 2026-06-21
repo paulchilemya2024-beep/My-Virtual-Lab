@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Browse Experiments — StemLab</title>
+  <link rel="stylesheet" href="styles.css"/>
+  <style>
+    .page-header {
+      padding: 40px 0 32px;
+      border-bottom: 1px solid var(--ink-20);
+      margin-bottom: 32px;
+    }
+    .page-header h1 { font-size: 1.8rem; margin-bottom: 6px; }
+    .page-header p { color: var(--ink-60); }
+
+    /* Filter bar */
+    .filter-bar {
+      display: flex; align-items: center; gap: 12px;
+      flex-wrap: wrap; margin-bottom: 28px;
+    }
+    .search-wrap {
+      flex: 1; min-width: 220px; max-width: 360px;
+      position: relative;
+    }
+    .search-icon {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      color: var(--ink-60); font-size: 0.9rem; pointer-events: none;
+    }
+    .search-wrap input {
+      width: 100%; padding: 10px 12px 10px 36px;
+      background: var(--white); border: 1.5px solid var(--ink-20);
+      border-radius: var(--radius-md); font-size: 0.9rem;
+      outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .search-wrap input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-10); }
+
+    .filter-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+    .filter-pill {
+      padding: 7px 14px;
+      border-radius: 100px;
+      border: 1.5px solid var(--ink-20);
+      background: var(--white);
+      font-size: 0.83rem; font-weight: 500;
+      cursor: pointer; transition: all 0.15s;
+      font-family: var(--font-sans);
+    }
+    .filter-pill:hover { border-color: var(--teal); color: var(--teal); }
+    .filter-pill.active { background: var(--ink); color: var(--acid); border-color: var(--ink); }
+
+    .sort-select {
+      padding: 8px 14px; border: 1.5px solid var(--ink-20);
+      border-radius: var(--radius-md); background: var(--white);
+      font-size: 0.85rem; cursor: pointer; outline: none;
+      margin-left: auto;
+    }
+
+    /* Experiment grid */
+    .labs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    .lab-card {
+      background: var(--white);
+      border: 1px solid var(--ink-20);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer; display: block; color: inherit;
+    }
+    .lab-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+    .lab-card-header {
+      padding: 20px 20px 0;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+    }
+    .lab-icon {
+      width: 48px; height: 48px;
+      border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; flex-shrink: 0;
+    }
+    .lab-card-meta { display: flex; align-items: center; gap: 6px; }
+    .lab-card-body { padding: 14px 20px; }
+    .lab-card-title { font-family: var(--font-mono); font-size: 0.95rem; font-weight: 500; margin-bottom: 6px; }
+    .lab-card-desc  { font-size: 0.85rem; color: var(--ink-60); line-height: 1.55; }
+    .lab-card-footer {
+      padding: 14px 20px;
+      border-top: 1px solid var(--ink-20);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .lab-info { display: flex; align-items: center; gap: 12px; }
+    .lab-info-item { font-size: 0.78rem; color: var(--ink-60); font-family: var(--font-mono); display: flex; align-items: center; gap: 4px; }
+    .lab-card-cta { font-size: 0.82rem; font-weight: 500; color: var(--teal); }
+    .lab-card.completed .lab-card-header::after {
+      /* completion badge is done in HTML */
+    }
+    .completed-badge {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--success); color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.65rem; flex-shrink: 0;
+    }
+
+    /* Featured experiment banner */
+    .featured-banner {
+      background: var(--ink);
+      border-radius: var(--radius-xl);
+      padding: 28px 32px;
+      display: flex; align-items: center; gap: 32px;
+      margin-bottom: 32px;
+    }
+    .featured-icon {
+      font-size: 2.5rem; flex-shrink: 0;
+      width: 72px; height: 72px;
+      background: rgba(255,255,255,0.06);
+      border-radius: var(--radius-lg);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .featured-content h3 { color: var(--white); font-size: 1.1rem; margin-bottom: 4px; }
+    .featured-content p  { color: rgba(255,255,255,0.5); font-size: 0.88rem; }
+    .featured-tag { color: var(--acid); font-family: var(--font-mono); font-size: 0.72rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+    .featured-banner .btn-start {
+      margin-left: auto; flex-shrink: 0;
+      background: var(--acid); color: var(--ink);
+      padding: 12px 24px; border-radius: var(--radius-md);
+      font-weight: 500; font-size: 0.9rem;
+      transition: transform 0.15s;
+    }
+    .featured-banner .btn-start:hover { transform: translateY(-2px); }
+
+    /* Empty state */
+    .empty-state { text-align: center; padding: 64px 24px; color: var(--ink-60); }
+    .empty-state-icon { font-size: 3rem; margin-bottom: 16px; }
+
+    /* Results count */
+    .results-count { font-size: 0.85rem; color: var(--ink-60); font-family: var(--font-mono); margin-bottom: 16px; }
+
+    @media (max-width: 640px) {
+      .filter-bar { flex-direction: column; align-items: flex-start; }
+      .search-wrap { max-width: 100%; width: 100%; }
+      .sort-select { margin-left: 0; }
+      .featured-banner { flex-direction: column; gap: 16px; }
+      .featured-banner .btn-start { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container nav-inner">
+    <a href="index.html" class="nav-logo">
+      <div class="logo-icon">⚗</div>
+      StemLab
+    </a>
+    <div class="nav-links">
+      <a href="labs.html" class="nav-link active">Labs</a>
+      <a href="dashboard.html" class="nav-link">Dashboard</a>
+      <div class="avatar avatar-sm" style="margin-left:8px">AO</div>
+    </div>
+    <button class="hamburger" onclick="toggleMenu()" aria-label="Open menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- Mobile nav -->
+<div class="mobile-nav-overlay" id="mobileOverlay" onclick="toggleMenu()"></div>
+<div class="mobile-nav-panel" id="mobilePanel">
+  <div class="flex justify-between items-center mb-32">
+    <span class="nav-logo"><div class="logo-icon">⚗</div> StemLab</span>
+    <button onclick="toggleMenu()" class="btn btn-ghost btn-icon">✕</button>
+  </div>
+  <div class="flex flex-col gap-8">
+    <a href="labs.html" class="nav-link active" onclick="toggleMenu()">Labs</a>
+    <a href="dashboard.html" class="nav-link" onclick="toggleMenu()">Dashboard</a>
+  </div>
+</div>
+
+<div class="container">
+  <div class="page-header">
+    <h1>Experiments</h1>
+    <p>54 interactive labs across Chemistry, Physics, and Biology</p>
+  </div>
+
+  <!-- Featured banner -->
+  <div class="featured-banner">
+    <div class="featured-icon">🧪</div>
+    <div class="featured-content">
+      <div class="featured-tag">Recommended for you</div>
+      <h3>Acid-Base Titration</h3>
+      <p>Mix HCl and NaOH, find the equivalence point, watch the indicator change color. Perfect first experiment.</p>
+    </div>
+    <a href="lab.html?id=acid-base-titration" class="btn-start">Start now →</a>
+  </div>
+
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Search experiments…" oninput="filterLabs()" aria-label="Search experiments"/>
+    </div>
+    <div class="filter-pills">
+      <button class="filter-pill active" data-filter="all" onclick="setFilter('all',this)">All</button>
+      <button class="filter-pill" data-filter="chemistry" onclick="setFilter('chemistry',this)">🧪 Chemistry</button>
+      <button class="filter-pill" data-filter="physics" onclick="setFilter('physics',this)">⚡ Physics</button>
+      <button class="filter-pill" data-filter="biology" onclick="setFilter('biology',this)">🔬 Biology</button>
+      <button class="filter-pill" data-filter="beginner" onclick="setFilter('beginner',this)">Easy</button>
+    </div>
+    <select class="sort-select" onchange="sortLabs(this.value)" aria-label="Sort experiments">
+      <option value="recommended">Recommended</option>
+      <option value="difficulty-asc">Easiest first</option>
+      <option value="difficulty-desc">Hardest first</option>
+      <option value="az">A → Z</option>
+    </select>
+  </div>
+
+  <div class="results-count" id="resultsCount">Showing 8 experiments</div>
+
+  <!-- Labs grid -->
+  <div class="labs-grid" id="labsGrid">
+
+    <!-- Lab card: completed -->
+    <a href="lab.html?id=acid-base-titration" class="lab-card" data-subject="chemistry" data-difficulty="2">
+      <div class="lab-card-header">
+        <div class="lab-icon subject-chemistry">🧪</div>
+        <div class="lab-card-meta">
+          <span class="tag tag-teal">Chemistry</span>
+          <div class="completed-badge">✓</div>
+        </div>
+      </div>
+      <div class="lab-card-body">
+        <div class="lab-card-title">Acid-Base Titration</div>
+        <div class="lab-card-desc">Find the neutralization point by slowly adding NaOH to HCl. Watch the indicator change color in real time.</div>
+      </div>
+      <div class="lab-card-footer">
+        <div class="lab-info">
+          <span class="lab-info-item">⏱ 20 min</span>
+          <div class="stars"><span class="star filled">★</span><span class="star filled">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span></div>
+        </div>
+        <span class="lab-card-cta">Retry →</span>
+      </div>
+    </a>
+
+    <!-- Lab card: in progress -->
+    <a href="lab.html?id=circuit-building" class="lab-card" data-subject="physics" data-difficulty="3">
+      <div class="lab-card-header">
+        <div class="lab-icon subject-physics">⚡</div>
+        <div class="lab-card-meta">
+          <span class="tag" style="background:rgba(99,102,241,0.1);color:#4338ca">Physics</span>
+          <span class="tag tag-warn">In progress</span>
+        </div>
+      </div>
+      <div class="lab-card-body">
+        <div class="lab-card-title">Circuit Building</div>
+        <div class="lab-card-desc">Wire resistors, LEDs, and switches. Apply Ohm's Law to calculate voltage drops and predict bulb brightness.</div>
+      </div>
+      <div class="lab-card-footer">
+        <div class="lab-info">
+          <span class="lab-info-item">⏱ 30 min</span>
+          <div class="stars"><span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star">★</span><span class="star">★</span></div>
+        </div>
+        <span class="lab-card-cta">Resume →</span>
+      </div>
+    </a>
+
+    <!-- Lab card: new -->
+    <a href="lab.html?id=pendulum" class="lab-card" data-subject="physics" data-difficulty="2">
+      <div class="lab-card-header">
+        <div class="lab-icon subject-physics">🔩</div>
+        <div class="lab-card-meta">
+          <span class="tag" style="background:rgba(99,102,241,0.1);color:#4338ca">Physics</span>
+        </div>
+      </div>
+      <div class="lab-card-body">
+        <div class="lab-card-title">Pendulum Motion</div>
+        <div class="lab-card-desc">Change string length, mass, and release angle. Discover how each variable affects the period of oscillation.</div>
+      </div>
+      <div class="lab-card-footer">
+        <div class="lab-info">
+          <span class="lab-info-item">⏱ 15 min</span>
+          <div class="stars"><span class="star filled">★</span><span class="star filled">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span></div>
+        </div>
+        <span class="lab-card-cta">Start →</span>
+      </div>
+    </a>
+
+    <a href="lab.html?id=cell-explorer" class="lab-card" data-subject="biology" data-difficulty="1">
+      <div class="lab-card-header">
+        <div class="lab-icon subject-biology">🔬</div>
+        <div class="lab-card-meta">
+          <span class="tag tag-success">Biology</span>
+        </div>
+      </div>
+      <div class="lab-card-body">
+        <div class="lab-card-title">Cell Explorer</div>
+        <div class="lab-card-desc">Navigate through a plant and animal cell. Identify organelles and learn their functions interactively.</div>
+      </div>
+      <div class="lab-card-footer">
+        <div class="lab-info">
+          <span class="lab-info-item">⏱ 25 min</span>
+          <div class="stars"><span class="star filled">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span></div>
+        </div>
+        <span class="lab-card-cta">Start →</span>
+      </div>
+    </a>
+
+    <a href="lab.html?id=projectile-motion" class="lab-card" data-subject="physics" data-difficulty="3">
+      <div class="lab-card-header">
+        <div class="lab-icon subject-physics">🏹</div>
+        <div class="lab-card-meta">
+          <span class="tag" style="background:rgba(99,102,241,0.1);color:#4338ca">Physics</span>
+        </div>
+      </div>
+      <div class="lab-card-body">
+        <div class="lab-card-title">Projectile Motion</div>
+        <div class="lab-card-desc">Launch objects at different angles and speeds. Plot the trajectory and measure range, height, and time of flight.</div>
+      </div>
+      <div class="lab-card-footer">
+        <div class="lab-info">
+          <span class="lab-info-item">⏱ 20 min</span>
+          <div class="stars"><span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star">★</span><span class="star">★</span></div>
+        </div>
+        <span class="lab-card-cta">Start →</span>
+      </div>
+    </a>
+
+    <a href="lab.html?id=precipitation" class="lab-card" data-subject="chemistry" data-difficulty="3">
+      <div class="lab-card-header">
+        <div class="lab-icon subject-chemistry">⚗</div>
+        <div class="lab-card-meta">
+          <span class="tag tag-teal">Chemistry</span>
+        </div>
+      </div>
+      <div class="lab-card-body">
+        <div class="lab-card-title">Precipitation Reactions</div>
+        <div class="lab-card-desc">Mix ionic solutions and predict when a solid precipitate will form. Identify unknown solutions by their reactions.</div>
+      </div>
+      <div class="lab-card-footer">
+        <div class="lab-info">
+          <span class="lab-info-item">⏱ 25 min</span>
+          <div class="stars"><span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star">★</span><span class="star">★</span></div>
+        </div>
+        <span class="lab-card-cta">Start →</span>
+      </div>
+    </a>
+
+    <a href="lab.html?id=osmosis" class="lab-card" data-subject="biology" data-difficulty="2">
+      <div class="lab-card-header">
+        <div class="lab-icon subject-biology">💧</div>
+        <div class="lab-card-meta">
+          <span class="tag tag-success">Biology</span>
+        </div>
+      </div>
+      <div class="lab-card-body">
+        <div class="lab-card-title">Osmosis & Diffusion</div>
+        <div class="lab-card-desc">Observe water movement across semi-permeable membranes. Change salt concentration and watch cells shrink or swell.</div>
+      </div>
+      <div class="lab-card-footer">
+        <div class="lab-info">
+          <span class="lab-info-item">⏱ 18 min</span>
+          <div class="stars"><span class="star filled">★</span><span class="star filled">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span></div>
+        </div>
+        <span class="lab-card-cta">Start →</span>
+      </div>
+    </a>
+
+    <a href="lab.html?id=electrolysis" class="lab-card" data-subject="chemistry" data-difficulty="4">
+      <div class="lab-card-header">
+        <div class="lab-icon subject-chemistry">🔋</div>
+        <div class="lab-card-meta">
+          <span class="tag tag-teal">Chemistry</span>
+          <span class="tag tag-ink">Advanced</span>
+        </div>
+      </div>
+      <div class="lab-card-body">
+        <div class="lab-card-title">Electrolysis of Water</div>
+        <div class="lab-card-desc">Pass electric current through water and collect hydrogen and oxygen gases. Measure volume ratios and verify the formula.</div>
+      </div>
+      <div class="lab-card-footer">
+        <div class="lab-info">
+          <span class="lab-info-item">⏱ 35 min</span>
+          <div class="stars"><span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star filled">★</span><span class="star">★</span></div>
+        </div>
+        <span class="lab-card-cta">Start →</span>
+      </div>
+    </a>
+
+  </div>
+</div>
+
+<script>
+let currentFilter = 'all';
+let currentSearch = '';
+
+function setFilter(filter, el) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  filterLabs();
+}
+
+function filterLabs() {
+  currentSearch = document.getElementById('searchInput').value.toLowerCase();
+  const cards = document.querySelectorAll('.lab-card');
+  let visible = 0;
+  cards.forEach(card => {
+    const subject = card.dataset.subject;
+    const difficulty = parseInt(card.dataset.difficulty);
+    const title = card.querySelector('.lab-card-title').textContent.toLowerCase();
+    const desc  = card.querySelector('.lab-card-desc').textContent.toLowerCase();
+    const matchFilter = currentFilter === 'all' || subject === currentFilter ||
+                        (currentFilter === 'beginner' && difficulty <= 2);
+    const matchSearch = !currentSearch || title.includes(currentSearch) || desc.includes(currentSearch);
+    const show = matchFilter && matchSearch;
+    card.style.display = show ? 'block' : 'none';
+    if (show) visible++;
+  });
+  document.getElementById('resultsCount').textContent = `Showing ${visible} experiment${visible !== 1 ? 's' : ''}`;
+}
+
+function sortLabs(val) {
+  const grid = document.getElementById('labsGrid');
+  const cards = Array.from(grid.querySelectorAll('.lab-card'));
+  if (val === 'az') {
+    cards.sort((a,b) => a.querySelector('.lab-card-title').textContent.localeCompare(b.querySelector('.lab-card-title').textContent));
+  } else if (val === 'difficulty-asc') {
+    cards.sort((a,b) => parseInt(a.dataset.difficulty) - parseInt(b.dataset.difficulty));
+  } else if (val === 'difficulty-desc') {
+    cards.sort((a,b) => parseInt(b.dataset.difficulty) - parseInt(a.dataset.difficulty));
+  }
+  cards.forEach(c => grid.appendChild(c));
+}
+
+function toggleMenu() {
+  document.getElementById('mobileOverlay').classList.toggle('open');
+  document.getElementById('mobilePanel').classList.toggle('open');
+}
+</script>
+</body>
+</html>
