@@ -185,6 +185,30 @@ export const CHEMICALS = {
     tint: null,
     swatch: '#e8f4ff',
     hint: 'Neutral — dilutes the solution without reacting.',
+    tonicity: 0, // pure water — strongly hypotonic to a cell
+  },
+  // ── Osmosis bathing solutions ──────────────────────────────────────────────
+  // `tonicity` is the external solute concentration (arbitrary 0–1 scale) used by
+  // the osmosis simulation to decide which way water flows across the membrane.
+  'Salt solution': {
+    name: 'Salt solution',
+    formula: 'NaCl (aq)',
+    category: CATEGORY.BIOLOGICAL,
+    tint: hexToRgb('#dfe9f2'),
+    strength: 0.15,
+    swatch: '#cfe0ef',
+    hint: 'A concentrated salt bath — strongly hypertonic to the cell.',
+    tonicity: 0.9,
+  },
+  'Sugar solution': {
+    name: 'Sugar solution',
+    formula: 'C₁₂H₂₂O₁₁ (aq)',
+    category: CATEGORY.BIOLOGICAL,
+    tint: hexToRgb('#f3ecda'),
+    strength: 0.2,
+    swatch: '#ecdfbf',
+    hint: 'A sugary bath — here it is balanced (isotonic) with the cell.',
+    tonicity: 0.42,
   },
 }
 

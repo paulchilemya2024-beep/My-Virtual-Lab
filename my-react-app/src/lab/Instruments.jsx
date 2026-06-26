@@ -61,6 +61,49 @@ export function Thermometer({ temp, min = 10, max = 90 }) {
   )
 }
 
+// A full pH scale (0–14) with a marker that slides to the current reading. The
+// gradient mirrors universal-indicator colours so the bar doubles as a key.
+export function PhScale({ ph }) {
+  const pct = Math.max(0, Math.min(100, (ph / 14) * 100))
+  return (
+    <div className="ph-scale" aria-hidden="true">
+      <div className="ph-scale-bar" />
+      <div className="ph-scale-marker" style={{ left: `${pct}%` }}>
+        <span className="ph-scale-value">{ph.toFixed(1)}</span>
+      </div>
+      <div className="ph-scale-ticks">
+        <span>0</span>
+        <span>7</span>
+        <span>14</span>
+      </div>
+    </div>
+  )
+}
+
+// A small status pill — "Positive", "No reaction", "Hazard", etc. `tone` maps to
+// a colour (ok / warn / danger / muted) so every chemistry sim can report its
+// own kind of result without a pH meter.
+export function ResultBadge({ label, tone = 'muted' }) {
+  return <span className={`result-badge tone-${tone}`}>{label}</span>
+}
+
+// A compact checklist of goals for an experiment. Each goal is { label, done }.
+export function GoalTracker({ title = 'Goals', goals }) {
+  return (
+    <div className="goal-tracker">
+      <p className="goal-tracker-title">{title}</p>
+      <ul>
+        {goals.map((goal) => (
+          <li key={goal.label} className={goal.done ? 'is-done' : ''}>
+            <span className="goal-check">{goal.done ? '✓' : '○'}</span>
+            {goal.label}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 function lerpHex(a, b, t) {
   const pa = parseInt(a.slice(1), 16)
   const pb = parseInt(b.slice(1), 16)
