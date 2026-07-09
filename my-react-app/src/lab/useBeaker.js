@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { createState, addChemical, derive, computeEvents, coolStep, AMBIENT_TEMP } from './reactions.js'
+import { createState, addChemical, derive, computeEvents, reactTick, rinse as rinseAcc } from './reactions.js'
 import SoundEngine from './sound.js'
 
 // Shared beaker engine for every "pour reagents into a flask" chemistry sim
@@ -7,7 +7,7 @@ import SoundEngine from './sound.js'
 // the reaction accumulator, the eased render target, the sound engine and the
 // press-and-hold pour gesture, and hands the host component a single `onCommit`
 // callback fired once per completed pour. Each experiment supplies its OWN
-// `onCommit` (goal logic, SIMI messaging, progress) so the sims behave as
+// `onCommit` (goal logic, progress) so the sims behave as
 // genuinely separate experiments rather than one shared acid–base beaker.
 export function useBeaker({ onCommit, maxVolume = 30 }) {
   const [selectedChemical, setSelectedChemical] = useState('')
@@ -23,6 +23,7 @@ export function useBeaker({ onCommit, maxVolume = 30 }) {
   const beforePourRef = useRef(null)
   const pouredRef = useRef(0)
   const lastSyncRef = useRef(0)
+  const resetNonceRef = useRef(0)
   const soundRef = useRef(null)
   const onCommitRef = useRef(onCommit)
   const maxRef = useRef(maxVolume)
@@ -42,19 +43,23 @@ export function useBeaker({ onCommit, maxVolume = 30 }) {
     setReadout(targetRef.current)
   }, [])
 
-  // Sound engine + temperature relaxation timer.
+  // Sound engine + the reaction clock. Reactions evolve over real time: metals
+  // dissolve and consume acid, temperature climbs gradually toward the reaction
+  // peak and cools back to room temperature afterwards.
   useEffect(() => {
     soundRef.current = new SoundEngine()
-    const cool = setInterval(() => {
-      if (accRef.current.temp > AMBIENT_TEMP) {
-        accRef.current = coolStep(accRef.current, 1)
-        targetRef.current = derive(accRef.current)
-        syncReadout()
-      }
-    }, 1000)
+    let lastTick = performance.now()
+    const clock = setInterval(() => {
+      const now = performance.now()
+      const dt = Math.min(0.5, (now - lastTick) / 1000)
+      lastTick = now
+      accRef.current = reactTick(accRef.current, dt)
+      setTargetFromAcc(accRef.current)
+      syncReadout()
+    }, 150)
     const engine = soundRef.current
     return () => {
-      clearInterval(cool)
+      clearInterval(clock)
       engine.dispose()
     }
   }, [syncReadout])
@@ -64,6 +69,24 @@ export function useBeaker({ onCommit, maxVolume = 30 }) {
   }, [muted])
 
   const getTarget = useCallback(() => targetRef.current, [])
+
+  const setTargetFromAcc = useCallback((acc) => {
+    targetRef.current = { ...derive(acc), resetNonce: resetNonceRef.current }
+    return targetRef.current
+  }, [])
+
+  const rinse = useCallback(() => {
+    soundRef.current?.resume?.()
+    soundRef.current?.clink?.()
+    const { acc } = rinseAcc(accRef.current)
+    accRef.current = acc
+    setTargetFromAcc(acc)
+    beforePourRef.current = null
+    pouredRef.current = 0
+    lastSyncRef.current = 0
+    setReadout(targetRef.current)
+    setSelectedChemical('')
+  }, [setTargetFromAcc])
 
   const onPourStart = useCallback(() => {
     soundRef.current?.resume()
@@ -80,7 +103,7 @@ export function useBeaker({ onCommit, maxVolume = 30 }) {
       const { acc } = addChemical(accRef.current, sel, dv)
       pouredRef.current += dv
       accRef.current = acc
-      targetRef.current = derive(acc)
+      setTargetFromAcc(acc)
       const now = performance.now()
       if (now - lastSyncRef.current > 110) {
         lastSyncRef.current = now
@@ -119,10 +142,16 @@ export function useBeaker({ onCommit, maxVolume = 30 }) {
   // Rinse the flask back to empty. Host components reset their own goal state.
   const reset = useCallback(() => {
     accRef.current = createState().acc
-    targetRef.current = derive(accRef.current)
+    resetNonceRef.current += 1
+    setTargetFromAcc(accRef.current)
+    beforePourRef.current = null
+    pouredRef.current = 0
+    lastSyncRef.current = 0
+    soundRef.current?.stopPour?.()
+    soundRef.current?.stopBubbles?.()
     setReadout(targetRef.current)
     setSelectedChemical('')
-  }, [])
+  }, [setTargetFromAcc])
 
   return {
     selectedChemical,
@@ -135,6 +164,7 @@ export function useBeaker({ onCommit, maxVolume = 30 }) {
     getTarget,
     soundRef,
     reset,
+    rinse,
     pourHandlers: { onPourStart, onPourTick, onPourEnd },
   }
 }

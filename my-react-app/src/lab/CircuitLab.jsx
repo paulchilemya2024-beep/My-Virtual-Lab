@@ -30,7 +30,7 @@ const MATERIALS = [
 const COMPLETE_AT = 6
 
 export default function CircuitLab({ lab }) {
-  const { consultTutor, pushMessage, setProgress, setSummary } = lab
+  const { setProgress, setSummary } = lab
 
   const canvasRef = useRef(null)
   const wrapRef = useRef(null)
@@ -49,7 +49,6 @@ export default function CircuitLab({ lab }) {
       setPlaced(id)
       placedRef.current = mat
       brightnessTargetRef.current = mat.conductivity
-      const conductive = mat.conductivity > 0.05
 
       const already = tested.some((m) => m.id === id)
       const count = already ? tested.length : tested.length + 1
@@ -59,18 +58,9 @@ export default function CircuitLab({ lab }) {
       if (count >= COMPLETE_AT && !congratulatedRef.current) {
         congratulatedRef.current = true
         setSummary({ precisionAchieved: true })
-        pushMessage('tutor', `Great — you've tested ${count} materials! You can see the pattern: metals conduct, and most non-metals don't. Submit your results when you're ready.`)
       }
-
-      pushMessage('student', `I placed the ${mat.name.toLowerCase()} in the gap.`)
-      consultTutor('', `tested "${mat.name}" — it is a ${mat.result.toLowerCase()} (the bulb ${conductive ? 'lit up' : 'stayed off'})`, {
-        materialTested: mat.name,
-        result: mat.result,
-        conducts: conductive,
-        materialsTested: count,
-      })
     },
-    [consultTutor, pushMessage, setProgress, setSummary, tested],
+    [setProgress, setSummary, tested],
   )
 
   // ── Drag-and-drop (pointer events → works with mouse and touch) ──
@@ -146,8 +136,8 @@ export default function CircuitLab({ lab }) {
       const { w, h } = dims
       ctx.clearRect(0, 0, w, h)
       const bg = ctx.createLinearGradient(0, 0, 0, h)
-      bg.addColorStop(0, '#eef3f8')
-      bg.addColorStop(1, '#e3eaf1')
+      bg.addColorStop(0, '#0c162c')
+      bg.addColorStop(1, '#080f1e')
       ctx.fillStyle = bg
       ctx.fillRect(0, 0, w, h)
 
@@ -168,7 +158,7 @@ export default function CircuitLab({ lab }) {
 
       // ── Wires (drawn as segments leaving room for components) ──
       ctx.lineWidth = 4
-      ctx.strokeStyle = conductive ? '#1f6feb' : 'rgba(20,28,46,0.5)'
+      ctx.strokeStyle = conductive ? '#1f6feb' : 'rgba(150,170,210,0.45)'
       ctx.lineJoin = 'round'
       ctx.beginPath()
       // top wire: bulb→right→down→gap right end
@@ -194,14 +184,14 @@ export default function CircuitLab({ lab }) {
       // ── Battery ──
       ctx.save()
       ctx.translate(batX, batY)
-      ctx.fillStyle = '#0A0F1E'
+      ctx.fillStyle = '#cdd8ef'
       ctx.fillRect(-9, -22, 18, 12) // long terminal block
       ctx.fillRect(-5, 10, 10, 12)
       ctx.lineWidth = 4
-      ctx.strokeStyle = '#0A0F1E'
+      ctx.strokeStyle = '#cdd8ef'
       ctx.beginPath(); ctx.moveTo(-16, -10); ctx.lineTo(16, -10); ctx.stroke() // + plate (long)
       ctx.beginPath(); ctx.moveTo(-9, 10); ctx.lineTo(9, 10); ctx.stroke() // - plate (short)
-      ctx.fillStyle = 'rgba(20,28,46,0.6)'
+      ctx.fillStyle = 'rgba(226,236,255,0.7)'
       ctx.font = 'bold 14px ui-monospace, monospace'
       ctx.fillText('+', -28, -6)
       ctx.fillText('–', -26, 18)
@@ -261,10 +251,10 @@ export default function CircuitLab({ lab }) {
         : 'rgba(255,255,255,0.85)'
       ctx.fill()
       ctx.lineWidth = 2.5
-      ctx.strokeStyle = 'rgba(20,28,46,0.55)'
+      ctx.strokeStyle = 'rgba(226,236,255,0.5)'
       ctx.stroke()
       // Filament
-      ctx.strokeStyle = bright > 0.04 ? '#ff8a00' : 'rgba(20,28,46,0.4)'
+      ctx.strokeStyle = bright > 0.04 ? '#ff8a00' : 'rgba(226,236,255,0.4)'
       ctx.lineWidth = 2
       ctx.beginPath()
       ctx.moveTo(x - 8, y + 6)
@@ -273,17 +263,17 @@ export default function CircuitLab({ lab }) {
       ctx.lineTo(x + 7, y - 5)
       ctx.stroke()
       // Base
-      ctx.fillStyle = 'rgba(20,28,46,0.7)'
+      ctx.fillStyle = 'rgba(200,210,230,0.7)'
       ctx.fillRect(x - 9, y + 18, 18, 8)
       ctx.restore()
     }
 
     function drawGap(x, y, half, conductive) {
       // Wire stubs into the gap
-      ctx.strokeStyle = conductive ? '#1f6feb' : 'rgba(20,28,46,0.5)'
+      ctx.strokeStyle = conductive ? '#1f6feb' : 'rgba(150,170,210,0.45)'
       ctx.lineWidth = 4
       // terminals (little balls)
-      ctx.fillStyle = 'rgba(20,28,46,0.65)'
+      ctx.fillStyle = 'rgba(200,210,230,0.65)'
       ctx.beginPath(); ctx.arc(x - half, y, 5, 0, Math.PI * 2); ctx.fill()
       ctx.beginPath(); ctx.arc(x + half, y, 5, 0, Math.PI * 2); ctx.fill()
 
@@ -292,7 +282,7 @@ export default function CircuitLab({ lab }) {
         // Draw the placed material bridging the gap.
         ctx.save()
         ctx.fillStyle = conductive ? '#caa46a' : '#9aa3af'
-        ctx.strokeStyle = 'rgba(20,28,46,0.5)'
+        ctx.strokeStyle = 'rgba(150,170,210,0.45)'
         ctx.lineWidth = 2
         const w = half * 2 + 10
         ctx.beginPath()
@@ -317,7 +307,7 @@ export default function CircuitLab({ lab }) {
         }
       } else {
         // Empty gap hint
-        ctx.fillStyle = 'rgba(20,28,46,0.45)'
+        ctx.fillStyle = 'rgba(226,236,255,0.5)'
         ctx.font = '12px ui-monospace, monospace'
         ctx.textAlign = 'center'
         ctx.fillText('drop a material here', x, y + 30)

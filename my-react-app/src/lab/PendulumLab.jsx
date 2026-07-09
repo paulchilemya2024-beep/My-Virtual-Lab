@@ -6,13 +6,14 @@ import { useEffect, useRef, useState } from 'react'
 // live stopwatch that counts real oscillations.
 
 const GRAVITIES = [
-  { id: 'earth', name: 'Earth', g: 9.8 },
-  { id: 'moon', name: 'Moon', g: 1.6 },
-  { id: 'mars', name: 'Mars', g: 3.7 },
+  { id: 'earth', name: 'Earth', g: 9.81 },
+  { id: 'moon', name: 'Moon', g: 1.62 },
+  { id: 'mars', name: 'Mars', g: 3.72 },
+  { id: 'jupiter', name: 'Jupiter', g: 24.79 },
 ]
 
 export default function PendulumLab({ lab }) {
-  const { experiment, consultTutor, pushMessage, setProgress, setSummary } = lab
+  const { experiment, setProgress, setSummary } = lab
   const totalSteps = experiment?.steps?.length || 4
 
   const [length, setLength] = useState(1.0) // m
@@ -33,7 +34,6 @@ export default function PendulumLab({ lab }) {
   const lastPhaseRef = useRef(0)
   const canvasRef = useRef(null)
   const wrapRef = useRef(null)
-  const massDebounceRef = useRef(0)
   const exploredRef = useRef(new Set())
   const massRef = useRef(mass) // latest mass for the canvas loop, without restarting it
 
@@ -65,23 +65,12 @@ export default function PendulumLab({ lab }) {
     setProgress({ completed: Math.min(totalSteps, explored.size), total: totalSteps })
   }, [gravityId, setProgress, setSummary, totalSteps])
 
-  // Mass changes shouldn't affect the period — prompt SIMI to make the point.
+  // Mass changes shouldn't affect the period — the readout is the proof; the
+  // student compares "Theoretical period" against "Measured period" and sees
+  // both stay put while only mass moves.
   function handleMassChange(next) {
-    const prev = mass
     setMass(next)
-    if (next === prev) return
-    clearTimeout(massDebounceRef.current)
-    massDebounceRef.current = setTimeout(() => {
-      pushMessage('student', `I changed the bob mass to ${next.toFixed(1)} kg.`)
-      consultTutor(
-        '',
-        `changed the bob mass from ${prev.toFixed(1)} kg to ${next.toFixed(1)} kg, but the period stayed at ${period.toFixed(2)} s`,
-        { mass: next, length, gravity, period: Number(period.toFixed(2)), massChangedPeriod: false },
-      )
-    }, 500)
   }
-
-  useEffect(() => () => clearTimeout(massDebounceRef.current), [])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -138,7 +127,7 @@ export default function PendulumLab({ lab }) {
       const { w, h } = dims
       ctx.clearRect(0, 0, w, h)
       const bg = ctx.createLinearGradient(0, 0, 0, h)
-      bg.addColorStop(0, '#eef3f8'); bg.addColorStop(1, '#e3eaf1')
+      bg.addColorStop(0, '#0c162c'); bg.addColorStop(1, '#080f1e')
       ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h)
 
       const pivotX = w * 0.42
@@ -149,28 +138,32 @@ export default function PendulumLab({ lab }) {
       const bobY = pivotY + Lpx * Math.cos(theta)
 
       // Pivot mount
-      ctx.fillStyle = 'rgba(20,28,46,0.7)'
+      ctx.fillStyle = 'rgba(226,236,255,0.75)'
       ctx.fillRect(pivotX - 24, pivotY - 8, 48, 8)
       // Reference vertical
-      ctx.strokeStyle = 'rgba(20,28,46,0.18)'
+      ctx.strokeStyle = 'rgba(226,236,255,0.22)'
       ctx.setLineDash([3, 5])
       ctx.beginPath(); ctx.moveTo(pivotX, pivotY); ctx.lineTo(pivotX, pivotY + Lpx + 20); ctx.stroke()
       ctx.setLineDash([])
-      // Swing arc
-      ctx.strokeStyle = 'rgba(20,28,46,0.15)'
+      // Swing arc (motion trail)
+      ctx.strokeStyle = 'rgba(255,204,68,0.28)'
       ctx.beginPath(); ctx.arc(pivotX, pivotY, Lpx, Math.PI / 2 - theta0, Math.PI / 2 + theta0); ctx.stroke()
       // String
-      ctx.strokeStyle = 'rgba(20,28,46,0.7)'; ctx.lineWidth = 2
+      ctx.strokeStyle = 'rgba(226,236,255,0.75)'; ctx.lineWidth = 2
       ctx.beginPath(); ctx.moveTo(pivotX, pivotY); ctx.lineTo(bobX, bobY); ctx.stroke()
-      // Bob — radius grows a little with mass
+      // Bob — warm glowing gold, radius grows a little with mass
       const r = 10 + Math.sqrt(massRef.current) * 8
+      ctx.save()
+      ctx.shadowColor = 'rgba(255,204,68,0.9)'
+      ctx.shadowBlur = 18
       const grad = ctx.createRadialGradient(bobX - r * 0.3, bobY - r * 0.3, 2, bobX, bobY, r)
-      grad.addColorStop(0, '#37507a'); grad.addColorStop(1, '#0A0F1E')
+      grad.addColorStop(0, '#ffe9a8'); grad.addColorStop(1, '#ffcc44')
       ctx.fillStyle = grad
       ctx.beginPath(); ctx.arc(bobX, bobY, r, 0, Math.PI * 2); ctx.fill()
+      ctx.restore()
 
       // Angle label
-      ctx.fillStyle = 'rgba(20,28,46,0.65)'; ctx.font = '12px ui-monospace, monospace'
+      ctx.fillStyle = 'rgba(226,236,255,0.7)'; ctx.font = '12px ui-monospace, monospace'
       ctx.fillText(`θ = ${(theta * 180 / Math.PI).toFixed(0)}°`, pivotX + 30, pivotY + 20)
 
       // ── Energy bars (KE vs PE) ── exact split from conservation of energy:
@@ -183,17 +176,17 @@ export default function PendulumLab({ lab }) {
       const barW = 26
       const barH = h - 90
       const barY = 50
-      ctx.fillStyle = 'rgba(20,28,46,0.6)'; ctx.font = 'bold 11px ui-monospace, monospace'
+      ctx.fillStyle = 'rgba(226,236,255,0.65)'; ctx.font = 'bold 11px ui-monospace, monospace'
       ctx.fillText('Energy', barX - 4, 32)
       // KE bar
-      ctx.fillStyle = 'rgba(0,0,0,0.06)'; ctx.fillRect(barX, barY, barW, barH)
+      ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(barX, barY, barW, barH)
       ctx.fillStyle = '#1f6feb'; ctx.fillRect(barX, barY + barH * (1 - ke), barW, barH * ke)
-      ctx.fillStyle = 'rgba(20,28,46,0.6)'; ctx.fillText('KE', barX + 2, barY + barH + 16)
+      ctx.fillStyle = 'rgba(226,236,255,0.65)'; ctx.fillText('KE', barX + 2, barY + barH + 16)
       // PE bar
       const barX2 = barX + barW + 14
-      ctx.fillStyle = 'rgba(0,0,0,0.06)'; ctx.fillRect(barX2, barY, barW, barH)
+      ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fillRect(barX2, barY, barW, barH)
       ctx.fillStyle = '#f0a500'; ctx.fillRect(barX2, barY + barH * (1 - pe), barW, barH * pe)
-      ctx.fillStyle = 'rgba(20,28,46,0.6)'; ctx.fillText('PE', barX2 + 2, barY + barH + 16)
+      ctx.fillStyle = 'rgba(226,236,255,0.65)'; ctx.fillText('PE', barX2 + 2, barY + barH + 16)
     }
 
     raf = requestAnimationFrame(frame)

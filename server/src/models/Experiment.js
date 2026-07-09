@@ -24,6 +24,7 @@ const experimentSchema = new mongoose.Schema(
     difficulty: { type: Number, min: 1, max: 5, default: 1 },
     description: { type: String, default: '' },
     estimatedTime: { type: Number, default: 20 }, // minutes
+    icon: { type: String, default: '' }, // optional emoji shown on the lab card
     availableChemicals: { type: [String], default: [] },
     availableVariables: { type: [String], default: [] },
     // Reaction database — free-form object keyed by "A + B". See data/experiments.json.

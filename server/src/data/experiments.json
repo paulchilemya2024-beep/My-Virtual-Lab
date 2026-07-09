@@ -124,40 +124,25 @@
     "_id": "osmosis",
     "title": "Cell Osmosis",
     "subject": "biology",
-    "difficulty": 1,
-    "description": "Observe how water moves across a cell membrane between solutions of different concentration.",
-    "estimatedTime": 30,
-    "availableChemicals": ["Distilled water", "Salt solution", "Sugar solution"],
-    "availableVariables": ["concentration", "temperature", "time"],
+    "difficulty": 2,
+    "description": "Watch a living cell swell, shrink or stay steady as water crosses its membrane toward the more concentrated solution.",
+    "estimatedTime": 25,
+    "availableChemicals": ["Distilled Water", "0.9% Saline", "10% Salt Solution", "20% Sugar Solution"],
+    "availableVariables": ["concentration", "cellType"],
     "reactions": {},
     "steps": [
-      {
-        "stepNumber": 1,
-        "instruction": "Place the model cell into a beaker of distilled water.",
-        "hint": "Distilled water has a lower solute concentration than the cell."
-      },
-      {
-        "stepNumber": 2,
-        "instruction": "Observe whether the cell swells or shrinks.",
-        "hint": "Water moves from low to high solute concentration through the membrane."
-      },
-      {
-        "stepNumber": 3,
-        "instruction": "Move the cell into a strong salt solution.",
-        "hint": "Now the outside is more concentrated than the inside — which way will water flow?"
-      },
-      {
-        "stepNumber": 4,
-        "instruction": "Compare the cell's size in each solution and explain why.",
-        "hint": "Hypotonic = swells, hypertonic = shrinks, isotonic = no change."
-      }
+      { "stepNumber": 1, "instruction": "Select Distilled Water and watch the cell for about 10 seconds.", "hint": "Distilled water is hypotonic to the cell — which way will water move?" },
+      { "stepNumber": 2, "instruction": "Reset, then select 0.9% Saline and watch for 10 seconds.", "hint": "This matches the cell's own concentration — isotonic." },
+      { "stepNumber": 3, "instruction": "Reset, then select 10% Salt Solution and watch for 10 seconds.", "hint": "Now the outside is far more concentrated — hypertonic." },
+      { "stepNumber": 4, "instruction": "Switch to Plant Cell view and test the solutions again.", "hint": "The rigid cell wall changes how the plant cell responds." }
     ],
     "learningObjectives": [
       "Understand osmosis across a semi-permeable membrane",
       "Define hypotonic, hypertonic, and isotonic solutions",
-      "Predict the direction of water movement"
+      "Explain lysis, crenation, turgor pressure and plasmolysis",
+      "Predict the direction of water movement from concentration"
     ],
-    "successCriteria": { "correctPredictions": 3 }
+    "successCriteria": { "solutionsTested": 3 }
   },
   {
     "_id": "indicators",
@@ -267,37 +252,6 @@
     "successCriteria": { "precipitatesFormed": 2 }
   },
   {
-    "_id": "iodine-starch",
-    "title": "The Iodine–Starch Test",
-    "subject": "chemistry",
-    "difficulty": 1,
-    "description": "Use the classic test for starch: a milky-white suspension turns dramatic blue-black when iodine is added.",
-    "estimatedTime": 15,
-    "availableChemicals": ["Starch solution", "Iodine solution", "Distilled water"],
-    "availableVariables": ["volume"],
-    "reactions": {
-      "Iodine solution + Starch solution": {
-        "products": ["starch-iodine complex"],
-        "colorChange": { "fromColor": "#8B4513", "toColor": "#1a1a3e" },
-        "temperatureChange": 0,
-        "gasProduced": false,
-        "precipitate": false,
-        "description": "Amber iodine + milky starch turns intense blue-black."
-      }
-    },
-    "steps": [
-      { "stepNumber": 1, "instruction": "Pour the milky starch solution into the flask.", "hint": "Starch is a white, slightly opaque suspension." },
-      { "stepNumber": 2, "instruction": "Add a few drops of amber iodine solution.", "hint": "Watch the colour change immediately." },
-      { "stepNumber": 3, "instruction": "Observe the deep blue-black colour that develops.", "hint": "This colour confirms the presence of starch." }
-    ],
-    "learningObjectives": [
-      "Carry out the standard test for starch",
-      "Explain why iodine changes colour with starch",
-      "Recognise a positive result for a food test"
-    ],
-    "successCriteria": { "colorReached": "#1a1a3e" }
-  },
-  {
     "_id": "catalysis-peroxide",
     "title": "Catalysing Hydrogen Peroxide",
     "subject": "chemistry",
@@ -344,63 +298,104 @@
     "title": "Metals & Acids",
     "subject": "chemistry",
     "difficulty": 2,
-    "description": "React a reactive metal and a carbonate with acid, observing effervescence, heat and the gases produced.",
-    "estimatedTime": 20,
-    "availableChemicals": ["Magnesium ribbon", "Sodium carbonate", "HCl", "Distilled water"],
+    "description": "Test magnesium, zinc, iron and copper in hydrochloric acid to discover the reactivity series of metals.",
+    "estimatedTime": 25,
+    "availableChemicals": ["Magnesium ribbon", "Zinc granules", "Iron filings", "Copper strip", "Sodium carbonate", "HCl", "Distilled water"],
     "availableVariables": ["concentration", "volume", "temperature"],
     "reactions": {
       "Magnesium ribbon + HCl": {
         "products": ["MgCl2", "H2"],
         "colorChange": null,
-        "temperatureChange": 9,
+        "peakTemperature": 50,
         "gasProduced": true,
         "gasName": "H2",
         "precipitate": false,
-        "description": "Magnesium fizzes in acid, releasing hydrogen and heat (exothermic)."
+        "description": "Mg + 2HCl → MgCl₂ + H₂↑. Vigorous effervescence, flask warms to about 45–55 °C."
+      },
+      "Zinc granules + HCl": {
+        "products": ["ZnCl2", "H2"],
+        "colorChange": null,
+        "peakTemperature": 40,
+        "gasProduced": true,
+        "gasName": "H2",
+        "precipitate": false,
+        "description": "Zn + 2HCl → ZnCl₂ + H₂↑. Moderate, steady stream of bubbles, peaks around 35–45 °C."
+      },
+      "Iron filings + HCl": {
+        "products": ["FeCl2", "H2"],
+        "colorChange": null,
+        "peakTemperature": 34,
+        "gasProduced": true,
+        "gasName": "H2",
+        "precipitate": false,
+        "description": "Fe + 2HCl → FeCl₂ + H₂↑. Slow reaction, few bubbles, slight warmth (30–38 °C)."
+      },
+      "Copper strip + HCl": {
+        "products": [],
+        "colorChange": null,
+        "peakTemperature": 22,
+        "gasProduced": false,
+        "precipitate": false,
+        "description": "NO REACTION. Copper is below hydrogen in the reactivity series, so it cannot displace hydrogen from dilute acid. Temperature stays at room temperature."
+      },
+      "Any metal + Distilled water": {
+        "products": [],
+        "colorChange": null,
+        "peakTemperature": 22,
+        "gasProduced": false,
+        "precipitate": false,
+        "description": "NO REACTION. Water alone is not acidic enough to displace hydrogen from these metals under normal conditions."
       },
       "HCl + Sodium carbonate": {
         "products": ["NaCl", "H2O", "CO2"],
         "colorChange": null,
-        "temperatureChange": 2,
+        "peakTemperature": 30,
         "gasProduced": true,
         "gasName": "CO2",
         "precipitate": false,
-        "description": "Acid on a carbonate fizzes, releasing carbon dioxide."
+        "description": "Acid on a carbonate fizzes, releasing carbon dioxide — mildly exothermic (+8 °C)."
       }
     },
     "steps": [
-      { "stepNumber": 1, "instruction": "Add a strip of magnesium ribbon to the flask.", "hint": "The metal is solid and shiny." },
-      { "stepNumber": 2, "instruction": "Pour in hydrochloric acid and watch the reaction.", "hint": "Bubbles of hydrogen form and the flask warms up." },
-      { "stepNumber": 3, "instruction": "Rinse, then try sodium carbonate with the acid.", "hint": "Carbonates fizz too — but the gas is carbon dioxide." },
-      { "stepNumber": 4, "instruction": "Compare the vigour and warmth of the two reactions.", "hint": "Metal + acid is more exothermic than carbonate + acid." }
+      { "stepNumber": 1, "instruction": "Add magnesium ribbon to the flask, then pour in hydrochloric acid.", "hint": "Vigorous hydrogen bubbles and real heat — the most reactive metal here." },
+      { "stepNumber": 2, "instruction": "Rinse, then test zinc granules with the acid.", "hint": "Slower bubbles and less heat than magnesium — zinc is less reactive." },
+      { "stepNumber": 3, "instruction": "Rinse, then test iron filings with the acid.", "hint": "Very slow — just a few bubbles and slight warmth." },
+      { "stepNumber": 4, "instruction": "Rinse, then test the copper strip with the acid.", "hint": "Nothing happens! Copper sits below hydrogen in the reactivity series." },
+      { "stepNumber": 5, "instruction": "Finally, react sodium carbonate with the acid and compare.", "hint": "It fizzes too, but the gas is carbon dioxide, not hydrogen." }
     ],
     "learningObjectives": [
-      "Predict the products of metal + acid and carbonate + acid reactions",
+      "Rank metals by reactivity from their behaviour in acid",
+      "Explain why copper cannot displace hydrogen from an acid",
       "Identify hydrogen and carbon dioxide gases",
-      "Link effervescence and temperature rise to reaction type"
+      "Link effervescence and temperature rise to reaction vigour"
     ],
-    "successCriteria": { "gasesIdentified": 2 }
+    "successCriteria": { "materialsTested": 4 }
   },
   {
     "_id": "projectile",
     "title": "Projectile Motion",
     "subject": "physics",
     "difficulty": 3,
-    "description": "Launch a projectile at different angles and speeds and hit a target using real kinematics equations.",
-    "estimatedTime": 25,
+    "description": "Launch a projectile and discover the relationship between angle, velocity, range, and maximum height.",
+    "estimatedTime": 20,
+    "icon": "🚀",
     "availableChemicals": [],
     "availableVariables": ["angle", "velocity", "gravity"],
     "reactions": {},
     "steps": [
-      { "stepNumber": 1, "instruction": "Set a launch angle and an initial velocity.", "hint": "Angle is measured from the ground; velocity is in metres per second." },
-      { "stepNumber": 2, "instruction": "Launch the projectile and watch its parabolic path.", "hint": "x = v₀·cosθ·t and y = v₀·sinθ·t − ½·g·t²." },
-      { "stepNumber": 3, "instruction": "Adjust angle and velocity to land in the target.", "hint": "Range = v₀²·sin(2θ)/g — small changes near 45° matter most." },
-      { "stepNumber": 4, "instruction": "Compare your attempts and find the angle for maximum range.", "hint": "For a fixed speed, which angle sends it furthest?" }
+      { "stepNumber": 1, "instruction": "Set the angle to 45° and velocity to 30 m/s. Look at the dotted preview arc on the canvas before launching.", "hint": "What shape is the predicted path?" },
+      { "stepNumber": 2, "instruction": "Click LAUNCH and watch the ball travel along the trajectory.", "hint": "Observe how the height changes, how the horizontal distance grows, and where the highest point is reached." },
+      { "stepNumber": 3, "instruction": "Reset and try different angles with the SAME velocity — try 20°, 30°, 45°, 60°, 70°.", "hint": "Record the range in the attempts log for each. Which angle gives the greatest range?" },
+      { "stepNumber": 4, "instruction": "Try these pairs and compare the range: 30° then 60°, and 25° then 65°.", "hint": "Look at the range column in your log for these pairs — what do you notice?" },
+      { "stepNumber": 5, "instruction": "Select Moon gravity, keeping the same angle and velocity. Then try Mars and Jupiter.", "hint": "How does the range, maximum height, and flight time change with weaker or stronger gravity?" },
+      { "stepNumber": 6, "instruction": "A target has been placed on the ground. Adjust the angle and velocity to hit it.", "hint": "Use the predicted range value to help dial in the correct settings." }
     ],
     "learningObjectives": [
       "Apply the kinematic equations of projectile motion",
-      "Understand how launch angle and speed determine range",
-      "Discover that 45° gives the maximum range for a fixed speed"
+      "Understand how launch angle and speed determine range and maximum height",
+      "Discover that 45° gives the maximum range for a fixed speed",
+      "Show that complementary angles (e.g. 30°/60°) give equal range",
+      "Explain how gravity changes range, height and flight time"
     ],
     "successCriteria": { "targetHit": true }
   },

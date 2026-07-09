@@ -7,10 +7,6 @@ const config = {
   mongoUri: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/stem-lab',
   jwtSecret: process.env.JWT_SECRET || 'dev-only-insecure-secret-change-me',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  gemini: {
-    apiKey: process.env.GEMINI_API_KEY || '',
-    model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
-  },
   clientOrigins: (process.env.CLIENT_ORIGINS || 'http://localhost:5173')
     .split(',')
     .map((origin) => origin.trim())

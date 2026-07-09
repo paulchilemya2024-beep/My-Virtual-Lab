@@ -19,10 +19,6 @@ export const experimentsApi = {
   get: (id) => request(`/api/experiments/${id}`),
 }
 
-export const agentApi = {
-  ask: (payload) => request('/api/agent/ask', { method: 'POST', body: payload, auth: true }),
-}
-
 export const progressApi = {
   saveSession: (payload) => request('/api/progress/session', { method: 'POST', body: payload, auth: true }),
   me: () => request('/api/progress/me', { auth: true }),

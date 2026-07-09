@@ -3,7 +3,7 @@
 // - attaches the JWT from localStorage automatically
 // - parses JSON and throws a useful Error on non-2xx responses
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050'
 const TOKEN_KEY = 'stemlab_token'
 
 export function getToken() {

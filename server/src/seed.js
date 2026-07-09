@@ -15,6 +15,15 @@ async function seed() {
     console.log(`  ✔ ${exp._id} — ${exp.title}`);
   }
 
+  // Remove any experiments that are no longer in the JSON (e.g. deleted labs),
+  // so the app's catalogue always mirrors this file exactly.
+  const keepIds = experiments.map((e) => e._id);
+  const removed = await Experiment.deleteMany({ _id: { $nin: keepIds } });
+  if (removed.deletedCount > 0) console.log(`  ✂ removed ${removed.deletedCount} stale experiment(s)`);
+
+  const experimentsRouter = require('./routes/experiments');
+  experimentsRouter.cache.clear();
+
   console.log('✅ Seed complete.');
   await mongoose.connection.close();
   process.exit(0);

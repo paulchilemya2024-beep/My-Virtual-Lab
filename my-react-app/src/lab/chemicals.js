@@ -139,7 +139,34 @@ export const CHEMICALS = {
     solid: true,
     tint: null,
     swatch: '#c8ccd4',
-    hint: 'A reactive metal — fizzes in acid, releasing hydrogen.',
+    hint: 'A very reactive metal — fizzes vigorously in acid, releasing hydrogen.',
+  },
+  'Zinc granules': {
+    name: 'Zinc granules',
+    formula: 'Zn',
+    category: CATEGORY.METAL,
+    solid: true,
+    tint: null,
+    swatch: '#9aa4b2',
+    hint: 'A moderately reactive metal — steady stream of hydrogen bubbles in acid.',
+  },
+  'Iron filings': {
+    name: 'Iron filings',
+    formula: 'Fe',
+    category: CATEGORY.METAL,
+    solid: true,
+    tint: null,
+    swatch: '#6e6a66',
+    hint: 'A slowly reacting metal — only a few hydrogen bubbles in acid.',
+  },
+  'Copper strip': {
+    name: 'Copper strip',
+    formula: 'Cu',
+    category: CATEGORY.METAL,
+    solid: true,
+    tint: null,
+    swatch: '#c47a3d',
+    hint: 'Below hydrogen in the reactivity series — does NOT react with dilute acid.',
   },
   'Manganese dioxide': {
     name: 'Manganese dioxide',
@@ -184,31 +211,7 @@ export const CHEMICALS = {
     category: CATEGORY.WATER,
     tint: null,
     swatch: '#e8f4ff',
-    hint: 'Neutral — dilutes the solution without reacting.',
-    tonicity: 0, // pure water — strongly hypotonic to a cell
-  },
-  // ── Osmosis bathing solutions ──────────────────────────────────────────────
-  // `tonicity` is the external solute concentration (arbitrary 0–1 scale) used by
-  // the osmosis simulation to decide which way water flows across the membrane.
-  'Salt solution': {
-    name: 'Salt solution',
-    formula: 'NaCl (aq)',
-    category: CATEGORY.BIOLOGICAL,
-    tint: hexToRgb('#dfe9f2'),
-    strength: 0.15,
-    swatch: '#cfe0ef',
-    hint: 'A concentrated salt bath — strongly hypertonic to the cell.',
-    tonicity: 0.9,
-  },
-  'Sugar solution': {
-    name: 'Sugar solution',
-    formula: 'C₁₂H₂₂O₁₁ (aq)',
-    category: CATEGORY.BIOLOGICAL,
-    tint: hexToRgb('#f3ecda'),
-    strength: 0.2,
-    swatch: '#ecdfbf',
-    hint: 'A sugary bath — here it is balanced (isotonic) with the cell.',
-    tonicity: 0.42,
+    hint: 'Use this to rinse the flask between tests before trying a fresh reaction.',
   },
 }
 

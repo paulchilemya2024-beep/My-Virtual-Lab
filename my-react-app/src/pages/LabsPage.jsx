@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { experimentsApi } from '../api/index.js'
 
 const subjects = ['All', 'Chemistry', 'Physics', 'Biology']
+const SUBJECT_EMOJI = { chemistry: '🧪', physics: '⚡', biology: '🧬' }
 
 // Format minutes -> "25 min"; difficulty number -> a Beginner/Intermediate/Advanced label.
 const levelForDifficulty = (d) => (d <= 1 ? 'Beginner' : d <= 3 ? 'Intermediate' : 'Advanced')
@@ -70,7 +71,10 @@ export default function LabsPage() {
           <article key={lab.id} className="lab-card card">
             <div>
               <p className="tag tag-teal">{capitalize(lab.subject)}</p>
-              <h3>{lab.title}</h3>
+              <h3>
+                <span className="lab-card-icon" aria-hidden="true">{lab.icon || SUBJECT_EMOJI[lab.subject] || '🔬'}</span>
+                {lab.title}
+              </h3>
               <p className="text-muted text-sm">{lab.description}</p>
             </div>
             <div className="lab-footer">

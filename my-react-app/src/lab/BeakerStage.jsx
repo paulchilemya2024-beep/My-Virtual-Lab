@@ -6,7 +6,7 @@ import { getChemical, chemicalSwatch } from './chemicals.js'
 // button. All experiment-specific content (readouts, banners, goal trackers) is
 // injected through the `readouts` and `extra` slots, so every experiment keeps
 // its own identity while the plumbing lives in exactly one place.
-export default function BeakerStage({ sim, chemicals, hint, readouts, extra, onReset, danger, resetLabel }) {
+export default function BeakerStage({ sim, chemicals, hint, readouts, extra, onReset, onRinse, danger, resetLabel, banner }) {
   const { selectedChemical, selectChemical, flow, setFlow, muted, setMuted, getTarget, pourHandlers, soundRef } = sim
 
   return (
@@ -20,12 +20,14 @@ export default function BeakerStage({ sim, chemicals, hint, readouts, extra, onR
           onPourTick={pourHandlers.onPourTick}
           onPourEnd={pourHandlers.onPourEnd}
           soundRef={soundRef}
+          banner={banner}
         />
         <p className="pour-hint">
           {selectedChemical
             ? `Press and hold the beaker to pour ${getChemical(selectedChemical).name} — release to stop.`
             : hint || 'Select a reagent below, then press and hold the beaker to pour.'}
         </p>
+        {banner && <p className="reaction-banner">{banner}</p>}
       </div>
 
       {readouts}
@@ -55,6 +57,17 @@ export default function BeakerStage({ sim, chemicals, hint, readouts, extra, onR
         </button>
       </div>
 
+      <div className="reset-bar">
+        <button type="button" className="btn btn-outline btn-sm reset-btn" onClick={onReset} aria-label={resetLabel || 'Reset flask'}>
+          {resetLabel || '↺ Reset flask'}
+        </button>
+        {onRinse && (
+          <button type="button" className="btn btn-outline btn-sm rinse-btn" onClick={onRinse} aria-label="Rinse flask">
+            🧼 Rinse flask
+          </button>
+        )}
+      </div>
+
       <div className="chemical-panel">
         {chemicals.map((c) => (
           <button
@@ -69,9 +82,9 @@ export default function BeakerStage({ sim, chemicals, hint, readouts, extra, onR
           </button>
         ))}
       </div>
-      <button type="button" className="btn btn-outline btn-full btn-sm" onClick={onReset}>
-        {resetLabel || '↺ Reset flask'}
-      </button>
+      <p className="pour-hint" style={{ marginTop: '0.5rem', marginBottom: '0.75rem' }}>
+        Want a fresh comparison? Clear the beaker and start again.
+      </p>
     </>
   )
 }

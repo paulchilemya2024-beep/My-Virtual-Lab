@@ -1,92 +1,122 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useBeaker } from './useBeaker.js'
 import BeakerStage from './BeakerStage.jsx'
 import { getChemical } from './chemicals.js'
-import { AnimatedNumber, Thermometer, ResultBadge, GoalTracker } from './Instruments.jsx'
+import { AnimatedNumber, Thermometer, GoalTracker } from './Instruments.jsx'
 
-// Metals & acids. A reactive metal (magnesium) fizzes in acid, releasing hydrogen
-// and a lot of heat; a carbonate fizzes too, but the gas is carbon dioxide and the
-// reaction is far less exothermic. Instruments: temperature + which gas is coming off.
-const FALLBACK = ['Magnesium ribbon', 'Sodium carbonate', 'HCl', 'Distilled water']
+// Metals & acids — discover the reactivity series. Magnesium fizzes violently in
+// HCl, zinc steadily, iron slowly, and copper not at all (it sits below hydrogen
+// in the series). Distilled water never reacts with any of them. A carbonate
+// fizzes CO₂ for comparison. Feedback is a short on-canvas + on-screen banner
+// (no chat) that reads "No reaction" for copper or water, or names the gas.
+const FALLBACK = ['Magnesium ribbon', 'Zinc granules', 'Iron filings', 'Copper strip', 'Sodium carbonate', 'HCl', 'Distilled water']
+const METAL_IDS = ['Magnesium ribbon', 'Zinc granules', 'Iron filings', 'Copper strip']
 
 export default function MetalAcidLab({ lab }) {
-  const { experiment, consultTutor, pushMessage, setProgress, setSummary } = lab
-  const total = experiment?.steps?.length || 4
+  const { experiment, setProgress, setSummary } = lab
+  const total = experiment?.steps?.length || 5
   const chemicals = experiment?.availableChemicals?.length ? experiment.availableChemicals : FALLBACK
 
-  const gasesRef = useRef(new Set())
-  const [gases, setGases] = useState([])
+  const testedRef = useRef(new Set())
+  const [tested, setTested] = useState([])
+  const [banner, setBanner] = useState(null)
+  const bannerTimeoutRef = useRef(0)
+
+  const showBanner = useCallback((text) => {
+    setBanner(text)
+    clearTimeout(bannerTimeoutRef.current)
+    bannerTimeoutRef.current = setTimeout(() => setBanner(null), 4000)
+  }, [])
+  useEffect(() => () => clearTimeout(bannerTimeoutRef.current), [])
 
   const onCommit = useCallback(
     ({ after, acc, selected }) => {
-      const present = Object.keys(acc.contents).filter((id) => acc.contents[id] > 0)
-      if (after.gas.active && after.gas.name) gasesRef.current.add(after.gas.name)
-      const list = [...gasesRef.current]
-      setGases(list)
+      const acidPresent = acc.molesAcid - acc.molesBase > 0.02
+      const metalPresent = METAL_IDS.some((id) => (acc.contents[id] || 0) > 0 || (acc.salts?.[id] || 0) > 0)
 
-      const milestones = list.length + (list.length === 2 ? 2 : 0)
-      setProgress({ completed: Math.min(total, milestones || (present.length > 1 ? 1 : 0)), total })
-      setSummary({ precisionAchieved: list.length >= 2 })
-
-      const name = getChemical(selected).name
-      if (after.gas.active) {
-        const warm = after.temp > 26 ? ` and the flask warmed to about ${Math.round(after.temp)} °C` : ''
-        pushMessage('student', `Adding ${name} set off a fizz of ${after.gas.name}${warm}.`)
-        consultTutor('', `added ${name} — effervescence of ${after.gas.name} gas${warm}`, {
-          temperature: Math.round(after.temp),
-          chemicals: present,
-        })
-      } else {
-        pushMessage('student', `I added ${name}, but nothing is fizzing yet.`)
-        consultTutor('', `added ${name}; no gas yet — a metal or carbonate needs an acid to react`, {
-          temperature: Math.round(after.temp),
-          chemicals: present,
-        })
+      // ── Feedback banner (short, on-canvas + on-screen — no chat) ──
+      if (selected === 'Distilled water' && metalPresent) {
+        showBanner('No reaction — water alone cannot displace hydrogen')
+      } else if (selected === 'Distilled water' && !metalPresent && (acc.totalVolume > 0 || Object.keys(acc.contents || {}).length > 0)) {
+        showBanner('Flask rinsed — ready for a fresh test')
+      } else if (selected === 'Copper strip' && acidPresent) {
+        showBanner('No reaction — copper is below hydrogen in the series')
+      } else if ((acc.contents['Copper strip'] || 0) > 0 && selected === 'HCl' && !after.gas.active) {
+        showBanner('No reaction — copper is below hydrogen in the series')
+      } else if (after.gas.active && after.gas.name === 'H₂') {
+        const label =
+          after.gas.rate >= 0.9
+            ? 'Vigorous reaction — H₂ gas + strong heat'
+            : after.gas.rate >= 0.45
+              ? 'Steady reaction — H₂ gas + gentle heat'
+              : 'Slow reaction — a few H₂ bubbles'
+        showBanner(label)
+      } else if (after.gas.active && after.gas.name === 'CO₂') {
+        showBanner('CO₂ gas — a carbonate reaction, not a metal reaction')
       }
+
+      // ── Progress: each metal tested WITH acid + the carbonate = 5 steps ──
+      if (acidPresent) {
+        for (const id of METAL_IDS) {
+          if ((acc.contents[id] || 0) > 0 || (acc.salts?.[id] || 0) > 0) testedRef.current.add(id)
+        }
+      }
+      if (after.gas.name === 'CO₂') testedRef.current.add('Sodium carbonate')
+      const list = [...testedRef.current]
+      setTested(list)
+      setProgress({ completed: Math.min(total, list.length), total })
+      setSummary({ precisionAchieved: list.length >= 4 })
     },
-    [total, consultTutor, pushMessage, setProgress, setSummary],
+    [total, setProgress, setSummary, showBanner],
   )
 
   const sim = useBeaker({ onCommit })
 
   const reset = () => {
-    gasesRef.current = new Set()
-    setGases([])
+    testedRef.current = new Set()
+    setTested([])
+    setBanner(null)
     sim.reset()
-    setProgress({ completed: 0, total })
-    pushMessage('tutor', 'Flask rinsed. Drop in magnesium and add acid to make hydrogen, then rinse and try a carbonate with acid to make carbon dioxide.')
+    setProgress({ completed: Math.max(0, Math.min(total, 1)), total })
   }
 
   const gas = sim.readout.gas
+  const temp = sim.readout.temp
+
+  // Reactivity ranking built live from what the student has tested.
+  const ranked = METAL_IDS.filter((id) => tested.includes(id))
+
   const readouts = (
     <div className="sim-readouts">
       <div className="readout-chip thermo-chip">
         <span className="readout-label">Temp</span>
-        <AnimatedNumber className="readout-value" value={sim.readout.temp} decimals={1} suffix=" °C" />
-        <Thermometer temp={sim.readout.temp} />
+        <AnimatedNumber className="readout-value" value={temp} decimals={1} suffix=" °C" />
+        <Thermometer temp={temp} />
       </div>
       <div className="readout-chip">
         <span className="readout-label">Gas coming off</span>
-        <span className="readout-value" style={{ fontSize: '1.2rem' }}>
-          <ResultBadge label={gas.active ? gas.name : 'None'} tone={gas.active ? 'ok' : 'muted'} />
+        <span className="readout-value" style={{ fontSize: '1.1rem' }}>{gas.active ? gas.name : 'None'}</span>
+        <span className="readout-sub">
+          {gas.active ? (gas.rate >= 0.9 ? 'vigorous effervescence' : gas.rate >= 0.45 ? 'steady bubbles' : 'slow bubbles') : 'no reaction'}
         </span>
-        <span className="readout-sub">{gas.active ? 'effervescence' : 'no reaction'}</span>
       </div>
       <div className="readout-chip">
-        <span className="readout-label">Gases identified</span>
-        <AnimatedNumber className="readout-value" value={gases.length} decimals={0} />
-        <span className="readout-sub">{gases.length ? gases.join(' · ') : 'aim for H₂ and CO₂'}</span>
+        <span className="readout-label">Materials tested</span>
+        <AnimatedNumber className="readout-value" value={tested.length} decimals={0} suffix=" / 5" />
+        <span className="readout-sub">{ranked.length ? ranked.map((id) => getChemical(id).formula).join(' > ') : 'build the reactivity series'}</span>
       </div>
     </div>
   )
 
   const extra = (
     <GoalTracker
-      title="Identify the gases"
+      title="Build the reactivity series"
       goals={[
-        { label: 'React magnesium with acid (hydrogen)', done: gases.includes('H₂') },
-        { label: 'React a carbonate with acid (carbon dioxide)', done: gases.includes('CO₂') },
-        { label: 'Compare which reaction is more exothermic', done: gases.length >= 2 },
+        { label: 'Magnesium + acid — vigorous H₂ (hot!)', done: tested.includes('Magnesium ribbon') },
+        { label: 'Zinc + acid — steady H₂', done: tested.includes('Zinc granules') },
+        { label: 'Iron + acid — slow H₂', done: tested.includes('Iron filings') },
+        { label: 'Copper + acid — NO reaction', done: tested.includes('Copper strip') },
+        { label: 'Carbonate + acid — CO₂ for comparison', done: tested.includes('Sodium carbonate') },
       ]}
     />
   )
@@ -96,10 +126,11 @@ export default function MetalAcidLab({ lab }) {
       <BeakerStage
         sim={sim}
         chemicals={chemicals}
-        hint="Add a metal or carbonate, then pour acid on it to start the reaction."
+        hint="Add a metal first, then pour hydrochloric acid on it and watch the reaction. Rinse with distilled water between tests if you want to start fresh."
         readouts={readouts}
         extra={extra}
         onReset={reset}
+        banner={banner}
       />
     </div>
   )

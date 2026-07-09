@@ -3,19 +3,19 @@ import { Link } from 'react-router-dom'
 const subjects = [
   { name: 'Chemistry', emoji: '🧪', labs: 18 },
   { name: 'Physics', emoji: '⚡', labs: 12 },
-  { name: 'Biology', emoji: '🧬', labs: 14 },
+  { name: 'Biology', emoji: '🧬', labs: 4 },
 ]
 
 const features = [
   {
     title: 'Virtual/Hands-on experiments',
     description:
-      'Simulated lab activities let students explore reactions, circuits, and biology without physical equipment.',
+      'Simulated lab activities let students explore real reactions, circuits, motion and living cells without physical equipment.',
   },
   {
-    title: 'AI-guided learning',
+    title: 'Notes → Experiment → Questions',
     description:
-      'The tutor provides real-time prompts, feedback, and explanations as learners progress through each activity.',
+      'Every lab starts with curriculum notes you can listen to, runs a real interactive simulation, then checks understanding with a short quiz.',
   },
 ]
 
@@ -69,7 +69,7 @@ export default function HomePage() {
             </div>
             <div className="floating-tag tag-ai">
               <span className="dot-live" />
-              AI tutor active
+              Live simulation
             </div>
             <div className="beaker-mock" />
           </div>

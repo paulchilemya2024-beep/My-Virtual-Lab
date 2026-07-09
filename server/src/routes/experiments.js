@@ -29,7 +29,7 @@ router.get(
     if (search) filter.title = { $regex: search, $options: 'i' };
 
     const experiments = await Experiment.find(filter)
-      .select('title subject difficulty description estimatedTime')
+      .select('title subject difficulty description estimatedTime icon')
       .sort({ subject: 1, difficulty: 1 })
       .lean();
 

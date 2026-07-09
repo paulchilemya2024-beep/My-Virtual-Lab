@@ -7,7 +7,6 @@ const { badgeCatalog } = require('./utils/gamification');
 
 const authRoutes = require('./routes/auth');
 const experimentRoutes = require('./routes/experiments');
-const agentRoutes = require('./routes/agent');
 const progressRoutes = require('./routes/progress');
 
 // Builds the Express app (separated from server start so it can be tested).
@@ -39,7 +38,6 @@ function createApp() {
   // --- Route groups (Section 6 of the design doc) ---
   app.use('/api/auth', authRoutes);
   app.use('/api/experiments', experimentRoutes);
-  app.use('/api/agent', agentRoutes);
   app.use('/api/progress', progressRoutes);
 
   // --- Error handling (must come last) ---

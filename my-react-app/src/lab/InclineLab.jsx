@@ -15,7 +15,7 @@ const SURFACES = [
 ]
 
 export default function InclineLab({ lab }) {
-  const { experiment, consultTutor, pushMessage, setProgress, setSummary } = lab
+  const { experiment, setProgress, setSummary } = lab
   const totalSteps = experiment?.steps?.length || 4
 
   const [angle, setAngle] = useState(20)
@@ -42,29 +42,11 @@ export default function InclineLab({ lab }) {
     vRef.current = 0
   }, [surface.mu, surfaceId])
 
-  const onStartSliding = useCallback(
-    (thetaDeg, mu) => {
-      slideCountRef.current += 1
-      setSummary({ precisionAchieved: true })
-      setProgress({ completed: Math.min(totalSteps, slideCountRef.current), total: totalSteps })
-      const along = (MASS * G * Math.sin((thetaDeg * Math.PI) / 180)).toFixed(1)
-      const maxFric = (mu * MASS * G * Math.cos((thetaDeg * Math.PI) / 180)).toFixed(1)
-      pushMessage('student', `The block just started sliding at ${thetaDeg}°.`)
-      consultTutor(
-        '',
-        `the block began to slide at ${thetaDeg}° on ${surface.name.toLowerCase()} (μ=${mu}); the down-slope force (${along} N) just exceeded the maximum static friction (${maxFric} N)`,
-        {
-          angle: thetaDeg,
-          surface: surface.name,
-          coefficientOfFriction: mu,
-          forceAlongRamp: Number(along),
-          maxStaticFriction: Number(maxFric),
-          sliding: true,
-        },
-      )
-    },
-    [surface.name, totalSteps, consultTutor, pushMessage, setProgress, setSummary],
-  )
+  const onStartSliding = useCallback(() => {
+    slideCountRef.current += 1
+    setSummary({ precisionAchieved: true })
+    setProgress({ completed: Math.min(totalSteps, slideCountRef.current), total: totalSteps })
+  }, [totalSteps, setProgress, setSummary])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -124,7 +106,7 @@ export default function InclineLab({ lab }) {
       }
       if (slidingRef.current !== wasSliding) {
         setSliding(slidingRef.current)
-        if (!wasSliding && slidingRef.current) onStartSliding(angleRef.current, mu)
+        if (!wasSliding && slidingRef.current) onStartSliding()
       }
 
       draw(theta, normal, frictionMag, along)
@@ -155,7 +137,7 @@ export default function InclineLab({ lab }) {
       const { w, h } = dims
       ctx.clearRect(0, 0, w, h)
       const bg = ctx.createLinearGradient(0, 0, 0, h)
-      bg.addColorStop(0, '#eef3f8'); bg.addColorStop(1, '#e3eaf1')
+      bg.addColorStop(0, '#0c162c'); bg.addColorStop(1, '#080f1e')
       ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h)
 
       const sinT = Math.sin(theta)
@@ -173,13 +155,13 @@ export default function InclineLab({ lab }) {
       ctx.lineTo(top.x, top.y)
       ctx.lineTo(top.x, groundY)
       ctx.closePath(); ctx.fill()
-      ctx.strokeStyle = 'rgba(20,28,46,0.55)'; ctx.lineWidth = 2.5; ctx.stroke()
+      ctx.strokeStyle = 'rgba(226,236,255,0.55)'; ctx.lineWidth = 2.5; ctx.stroke()
       // Ground
       ctx.beginPath(); ctx.moveTo(0, groundY); ctx.lineTo(w, groundY); ctx.stroke()
       // Angle arc
-      ctx.strokeStyle = 'rgba(20,28,46,0.5)'; ctx.lineWidth = 1.5
+      ctx.strokeStyle = 'rgba(226,236,255,0.5)'; ctx.lineWidth = 1.5
       ctx.beginPath(); ctx.arc(bottom.x, bottom.y, 34, -theta, 0); ctx.stroke()
-      ctx.fillStyle = 'rgba(20,28,46,0.7)'; ctx.font = '12px ui-monospace, monospace'
+      ctx.fillStyle = 'rgba(226,236,255,0.8)'; ctx.font = '12px ui-monospace, monospace'
       ctx.fillText(`${angleRef.current}°`, bottom.x + 40, bottom.y - 8)
 
       // Block position along incline
@@ -196,9 +178,9 @@ export default function InclineLab({ lab }) {
       ctx.save()
       ctx.translate(bxC, byC)
       ctx.rotate(-theta)
-      ctx.fillStyle = '#0A0F1E'
+      ctx.fillStyle = '#33507f'
       ctx.fillRect(-half, -half, half * 2, half * 2)
-      ctx.fillStyle = 'rgba(255,255,255,0.15)'
+      ctx.fillStyle = 'rgba(255,255,255,0.18)'
       ctx.fillRect(-half, -half, half * 2, 6)
       ctx.restore()
 
@@ -215,7 +197,7 @@ export default function InclineLab({ lab }) {
       const netAlong = along - frictionMag // down-slope positive
       const dnSlope = { x: -cosT, y: sinT }
       if (Math.abs(netAlong) > 0.05) {
-        arrow(bxC, byC, dnSlope.x * netAlong * k, dnSlope.y * netAlong * k, '#0A0F1E', 'Net')
+        arrow(bxC, byC, dnSlope.x * netAlong * k, dnSlope.y * netAlong * k, '#ffffff', 'Net')
       }
     }
 

@@ -10,46 +10,33 @@ import { AnimatedNumber, ResultBadge, GoalTracker } from './Instruments.jsx'
 const FALLBACK = ['Copper sulfate', 'Iron(III) chloride', 'NaOH', 'Silver nitrate', 'Sodium chloride', 'Distilled water']
 
 export default function PrecipitationLab({ lab }) {
-  const { experiment, consultTutor, pushMessage, setProgress, setSummary, addMistake } = lab
+  const { experiment, setProgress, setSummary, addMistake } = lab
   const total = experiment?.steps?.length || 4
   const chemicals = experiment?.availableChemicals?.length ? experiment.availableChemicals : FALLBACK
 
   const seenRef = useRef(new Set())
   const [formed, setFormed] = useState({ label: null, color: null })
   const [count, setCount] = useState(0)
+  const [banner, setBanner] = useState('')
 
   const onCommit = useCallback(
     ({ before, after, acc, selected }) => {
       const precip = after.precipitate
-      const name = getChemical(selected).name
 
       if (precip.active && precip.label) {
-        const isNew = !seenRef.current.has(precip.label)
         seenRef.current.add(precip.label)
         const n = seenRef.current.size
         setCount(n)
         setFormed({ label: precip.label, color: precip.color })
         setProgress({ completed: Math.min(total, n + 1), total })
         setSummary({ precisionAchieved: n >= 2 })
-        if (isNew) {
-          pushMessage('student', `A ${precip.label} precipitate just formed and is settling out!`)
-          consultTutor('', `mixed reagents and a ${precip.label} precipitate formed`, {
-            chemicals: Object.keys(acc.contents).filter((id) => acc.contents[id] > 0),
-            precipitate: precip.label,
-          })
-        }
-      } else {
-        // Pouring a single salt with nothing to react with — no solid forms.
-        pushMessage('student', `I added ${name}, but no solid appeared yet.`)
-        consultTutor('', `added ${name} but no precipitate has formed`, {
-          chemicals: Object.keys(acc.contents).filter((id) => acc.contents[id] > 0),
-        })
-        if (!before.precipitate.active && Object.keys(acc.contents).filter((id) => acc.contents[id] > 0).length >= 3) {
-          addMistake({ step: count + 1, action: `added ${name} with no matching partner — no precipitate` })
-        }
+      } else if (!before.precipitate.active && Object.keys(acc.contents).filter((id) => acc.contents[id] > 0).length >= 3) {
+        // Pouring a third+ reagent with nothing to react with — no solid forms.
+        const name = getChemical(selected).name
+        addMistake({ step: count + 1, action: `added ${name} with no matching partner — no precipitate` })
       }
     },
-    [total, count, consultTutor, pushMessage, setProgress, setSummary, addMistake],
+    [total, count, setProgress, setSummary, addMistake],
   )
 
   const sim = useBeaker({ onCommit })
@@ -58,9 +45,15 @@ export default function PrecipitationLab({ lab }) {
     seenRef.current = new Set()
     setFormed({ label: null, color: null })
     setCount(0)
+    setBanner('')
     sim.reset()
-    setProgress({ completed: 0, total })
-    pushMessage('tutor', 'Flask rinsed. Try pairing a metal salt with sodium hydroxide, or silver nitrate with a chloride, to make a precipitate.')
+    setProgress({ completed: Math.max(0, Math.min(total, 1)), total })
+    setSummary({ precisionAchieved: false })
+  }
+
+  const rinse = () => {
+    setBanner('Water added — residue remains in the flask')
+    sim.rinse(4)
   }
 
   const active = sim.readout.precipitate.active
@@ -112,6 +105,8 @@ export default function PrecipitationLab({ lab }) {
         readouts={readouts}
         extra={extra}
         onReset={reset}
+        onRinse={rinse}
+        banner={banner}
       />
     </div>
   )

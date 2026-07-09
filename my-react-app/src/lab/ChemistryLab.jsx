@@ -1,16 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { createState, addChemical, derive, computeEvents, coolStep, AMBIENT_TEMP } from './reactions.js'
+import { createState, addChemical, derive, computeEvents, reactTick, AMBIENT_TEMP } from './reactions.js'
 import { getChemical, chemicalSwatch } from './chemicals.js'
 import SoundEngine from './sound.js'
 import LabCanvas from './LabCanvas.jsx'
 import { AnimatedNumber, Thermometer } from './Instruments.jsx'
 
-// The chemistry beaker simulation (titration, indicators, precipitation, gas,
-// iodine–starch, peroxide, metal+acid). Extracted from LabPage so the lab page
-// can dispatch between this and the physics simulations. All shared concerns
-// (SIMI chat, submit, progress) come through the `lab` API prop.
+// The generic chemistry beaker simulation — a last-resort fallback for any
+// chemical experiment without its own dedicated component. All shared concerns
+// (submit, progress) come through the `lab` API prop.
 export default function ChemistryLab({ lab }) {
-  const { experiment, consultTutor, pushMessage, setProgress, addMistake, setSummary } = lab
+  const { experiment, setProgress, addMistake, setSummary } = lab
 
   const [selectedChemical, setSelectedChemical] = useState('')
   const [flow, setFlow] = useState(2)
@@ -42,19 +41,21 @@ export default function ChemistryLab({ lab }) {
     setReadout({ ph: d.ph, temp: d.temp, volume: d.volume, phLabel: d.phLabel, danger: d.danger })
   }, [])
 
-  // Sound engine + temperature relaxation timer.
+  // Sound engine + the reaction clock (time-based kinetics + gradual heat).
   useEffect(() => {
     soundRef.current = new SoundEngine()
-    const cool = setInterval(() => {
-      if (accRef.current.temp > AMBIENT_TEMP) {
-        accRef.current = coolStep(accRef.current, 1)
-        targetRef.current = derive(accRef.current)
-        syncReadout()
-      }
-    }, 1000)
+    let lastTick = performance.now()
+    const clock = setInterval(() => {
+      const now = performance.now()
+      const dt = Math.min(0.5, (now - lastTick) / 1000)
+      lastTick = now
+      accRef.current = reactTick(accRef.current, dt)
+      targetRef.current = derive(accRef.current)
+      syncReadout()
+    }, 150)
     const engine = soundRef.current
     return () => {
-      clearInterval(cool)
+      clearInterval(clock)
       engine.dispose()
     }
   }, [syncReadout])
@@ -104,29 +105,17 @@ export default function ChemistryLab({ lab }) {
     stepsRef.current = Math.min(totalSteps, stepsRef.current + 1)
     setProgress({ completed: stepsRef.current, total: totalSteps })
 
-    const notes = []
-    if (events.includes('endpoint')) notes.push('reached the neutral endpoint')
-    if (events.includes('precipitate')) notes.push(`a ${after.precipitate.label || 'solid'} precipitate formed`)
-    if (events.includes('fizz')) notes.push(`${after.gas.name} gas was produced`)
-    if (events.includes('danger')) notes.push('a DANGEROUS reaction occurred')
-
     const overshoot = accRef.current.molesAcid > 0 && accRef.current.molesBase > 0 && after.ph > 7.6
-    if (overshoot) notes.push('the base overshot past neutral (pH too high)')
     if (overshoot || events.includes('danger')) {
+      const notes = []
+      if (overshoot) notes.push('the base overshot past neutral (pH too high)')
+      if (events.includes('danger')) notes.push('a DANGEROUS reaction occurred')
       addMistake({ step: stepsRef.current, action: `added ${sel}: ${notes.join(', ')}` })
     }
 
     const precision = after.ph >= 6.9 && after.ph <= 7.1 && accRef.current.molesAcid > 0 && accRef.current.molesBase > 0
     setSummary({ precisionAchieved: precision, finalPH: Number(after.ph.toFixed(1)) })
-
-    const action = `added ${sel}${notes.length ? ` — ${notes.join(', ')}` : ''}`
-    pushMessage('student', `I poured some ${getChemical(sel).name} into the flask.`)
-    consultTutor('', action, {
-      chemicals: Object.keys(accRef.current.contents),
-      temperature: Math.round(after.temp),
-      currentPH: Number(after.ph.toFixed(1)),
-    })
-  }, [totalSteps, addMistake, setProgress, setSummary, pushMessage, consultTutor, syncReadout])
+  }, [totalSteps, addMistake, setProgress, setSummary, syncReadout])
 
   function selectChemical(name) {
     setSelectedChemical(name)
@@ -137,10 +126,15 @@ export default function ChemistryLab({ lab }) {
   function resetExperiment() {
     accRef.current = createState().acc
     targetRef.current = derive(accRef.current)
+    beforePourRef.current = null
+    pouredRef.current = 0
+    lastSyncRef.current = 0
     stepsRef.current = 0
+    soundRef.current?.stopPour?.()
+    soundRef.current?.stopBubbles?.()
+    setSelectedChemical('')
     syncReadout()
     setProgress({ completed: 0, total: totalSteps })
-    pushMessage('tutor', 'Flask rinsed and reset. Let’s try again — pour slowly and watch the readings.')
   }
 
   const chemicals = experiment.availableChemicals?.length

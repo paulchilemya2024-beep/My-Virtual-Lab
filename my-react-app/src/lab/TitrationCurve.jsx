@@ -45,12 +45,12 @@ export default function TitrationCurve({ points, reached }) {
     const sy = (ph) => padT + (1 - ph / Y_MAX) * plotH
 
     ctx.clearRect(0, 0, w, h)
-    ctx.fillStyle = '#ffffff'
+    ctx.fillStyle = '#0d1526'
     ctx.fillRect(0, 0, w, h)
 
     // Grid + axis labels
-    ctx.strokeStyle = 'rgba(20,28,46,0.08)'
-    ctx.fillStyle = 'rgba(20,28,46,0.5)'
+    ctx.strokeStyle = 'rgba(226,236,255,0.1)'
+    ctx.fillStyle = 'rgba(226,236,255,0.55)'
     ctx.lineWidth = 1
     ctx.font = '9px ui-monospace, monospace'
     ctx.textAlign = 'center'
@@ -67,16 +67,16 @@ export default function TitrationCurve({ points, reached }) {
     ctx.fillText('mL of base added', padL + plotW / 2, h - 0.5)
 
     // Equivalence volume marker (25 mL)
-    ctx.strokeStyle = 'rgba(20,28,46,0.15)'
+    ctx.strokeStyle = 'rgba(226,236,255,0.18)'
     ctx.setLineDash([3, 4])
     ctx.beginPath(); ctx.moveTo(sx(EQUIV_X), padT); ctx.lineTo(sx(EQUIV_X), padT + plotH); ctx.stroke()
 
     // pH 7 equivalence line (green once reached)
-    ctx.strokeStyle = reachedRef.current ? '#00B465' : 'rgba(20,28,46,0.45)'
+    ctx.strokeStyle = reachedRef.current ? '#00e08a' : 'rgba(226,236,255,0.5)'
     ctx.lineWidth = reachedRef.current ? 2 : 1.5
     ctx.beginPath(); ctx.moveTo(padL, sy(7)); ctx.lineTo(padL + plotW, sy(7)); ctx.stroke()
     ctx.setLineDash([])
-    ctx.fillStyle = reachedRef.current ? '#00B465' : 'rgba(20,28,46,0.55)'
+    ctx.fillStyle = reachedRef.current ? '#00e08a' : 'rgba(226,236,255,0.6)'
     ctx.textAlign = 'left'
     ctx.font = 'bold 9px ui-monospace, monospace'
     ctx.fillText('Equivalence point (pH 7)', padL + 4, sy(7) - 4)

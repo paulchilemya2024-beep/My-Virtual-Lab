@@ -1,16 +1,15 @@
 import { useCallback, useRef, useState } from 'react'
 import { useBeaker } from './useBeaker.js'
 import BeakerStage from './BeakerStage.jsx'
-import { getChemical } from './chemicals.js'
 import { AnimatedNumber, Thermometer, ResultBadge, GoalTracker } from './Instruments.jsx'
 
 // Catalysing hydrogen peroxide. Peroxide decomposes slowly on its own; manganese
 // dioxide catalyses it into a vigorous froth of oxygen + heat. Mixing peroxide
-// with potassium permanganate is hazardous — the flask flashes red and SIMI warns.
+// with potassium permanganate is hazardous — the flask flashes red as a warning.
 const FALLBACK = ['Hydrogen peroxide', 'Manganese dioxide', 'Potassium permanganate', 'Distilled water']
 
 export default function PeroxideLab({ lab }) {
-  const { experiment, consultTutor, pushMessage, setProgress, setSummary, addMistake } = lab
+  const { experiment, setProgress, setSummary, addMistake } = lab
   const total = experiment?.steps?.length || 3
   const chemicals = experiment?.availableChemicals?.length ? experiment.availableChemicals : FALLBACK
 
@@ -18,7 +17,7 @@ export default function PeroxideLab({ lab }) {
   const [flags, setFlags] = useState({ slow: false, catalysed: false, hazard: false })
 
   const onCommit = useCallback(
-    ({ after, acc, selected }) => {
+    ({ after, acc }) => {
       const has = (id) => (acc.contents[id] || 0) > 0
       const f = { ...flagsRef.current }
       if (has('Hydrogen peroxide')) f.slow = true
@@ -33,30 +32,9 @@ export default function PeroxideLab({ lab }) {
 
       if (after.danger) {
         addMistake({ step: total, action: 'mixed hydrogen peroxide with potassium permanganate — a violent, hazardous reaction' })
-        pushMessage('student', 'Whoa — that reacted violently and the flask is getting dangerously hot!')
-        consultTutor('', 'DANGER: mixed hydrogen peroxide with potassium permanganate — a violent exothermic reaction', {
-          temperature: Math.round(after.temp),
-          chemicals: Object.keys(acc.contents).filter((id) => acc.contents[id] > 0),
-        })
-        return
-      }
-
-      const name = getChemical(selected).name
-      if (f.catalysed && after.gas.active) {
-        pushMessage('student', 'The manganese dioxide made it froth up with oxygen and the flask warmed up fast!')
-        consultTutor('', `added ${name} — the catalyst drives rapid oxygen production (frothing) and the temperature is rising`, {
-          temperature: Math.round(after.temp),
-          chemicals: Object.keys(acc.contents).filter((id) => acc.contents[id] > 0),
-        })
-      } else {
-        pushMessage('student', `I added ${name}.`)
-        consultTutor('', `added ${name}; ${after.gas.active ? 'oxygen is bubbling off slowly' : 'no reaction yet'}`, {
-          temperature: Math.round(after.temp),
-          chemicals: Object.keys(acc.contents).filter((id) => acc.contents[id] > 0),
-        })
       }
     },
-    [total, consultTutor, pushMessage, setProgress, setSummary, addMistake],
+    [total, setProgress, setSummary, addMistake],
   )
 
   const sim = useBeaker({ onCommit })
@@ -65,8 +43,7 @@ export default function PeroxideLab({ lab }) {
     flagsRef.current = { slow: false, catalysed: false, hazard: false }
     setFlags({ slow: false, catalysed: false, hazard: false })
     sim.reset()
-    setProgress({ completed: 0, total })
-    pushMessage('tutor', 'Flask rinsed. Pour in hydrogen peroxide, then add a little manganese dioxide catalyst and watch the oxygen froth. Keep the permanganate away from the peroxide.')
+    setProgress({ completed: Math.max(0, Math.min(total, 1)), total })
   }
 
   const gas = sim.readout.gas

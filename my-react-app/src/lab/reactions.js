@@ -1,19 +1,61 @@
 // Reaction engine for the virtual chemistry lab.
 //
-// This is intentionally a *teaching* model, not a rigorous physical-chemistry
-// solver. It tracks how much of each reagent is in the flask and derives the
-// observable state a student would actually see: pH, the solution colour
-// (including indicator response), precipitates, gas/effervescence, heat, and
-// dangerous combinations.
+// This is a *teaching* model, but it follows the real chemistry principles:
+// reactions run over TIME (not instantly on pour), reagents are CONSUMED as they
+// react, heat rises gradually toward a realistic per-reaction peak and then cools
+// back toward room temperature, and only chemically-correct combinations react.
+// Distilled water never reacts with a metal; copper never reacts with dilute HCl.
 //
-// The engine is pure: `addChemical` returns a brand-new accumulator plus the
-// derived, render-ready state and a list of one-shot `events` (pour, fizz,
-// hiss, precipitate, endpoint, danger) that the UI turns into sound + visuals.
+// The engine is pure: `addChemical` mixes a reagent in, and `reactTick(acc, dt)`
+// advances the ongoing reactions by `dt` seconds. `derive` turns an accumulator
+// into the observable state the student sees: pH, colour, gas, solids, heat.
 
 import { CATEGORY, getChemical, hexToRgb } from './chemicals.js'
 
 export const AMBIENT_TEMP = 22
 const DANGER_TEMP = 80
+
+// ── Metal reactivity data (the heart of the metals & acids experiment) ───────
+// peak      — maximum flask temperature this reaction can reach (°C)
+// rate      — how fast the metal dissolves in excess acid (units per second)
+// gasRate   — bubble intensity 0..1 while reacting
+// saltTint  — colour the dissolved metal chloride gives the solution (or null)
+export const METAL_DATA = {
+  'Magnesium ribbon': {
+    peak: 52, // real Mg + HCl peaks around 45–55 °C
+    rate: 0.30,
+    gasRate: 1.0,
+    saltTint: { rgb: hexToRgb('#e6f0ff'), strength: 0.25 }, // slightly milky MgCl₂
+    equation: 'Mg + 2HCl → MgCl₂ + H₂↑',
+  },
+  'Zinc granules': {
+    peak: 40, // 35–45 °C
+    rate: 0.12,
+    gasRate: 0.55,
+    saltTint: { rgb: hexToRgb('#dce6c8'), strength: 0.2 }, // faint yellow ZnCl₂
+    equation: 'Zn + 2HCl → ZnCl₂ + H₂↑',
+  },
+  'Iron filings': {
+    peak: 34, // 30–38 °C, slow
+    rate: 0.05,
+    gasRate: 0.25,
+    saltTint: { rgb: hexToRgb('#c8b48c'), strength: 0.45 }, // pale green-brown FeCl₂
+    equation: 'Fe + 2HCl → FeCl₂ + H₂↑',
+  },
+  'Copper strip': {
+    peak: AMBIENT_TEMP, // NO reaction — Cu is below H in the reactivity series
+    rate: 0,
+    gasRate: 0,
+    saltTint: null,
+    equation: 'Cu + HCl → no reaction',
+  },
+}
+
+// mmol of H⁺ consumed per unit of metal dissolved (teaching scale).
+const ACID_PER_METAL_UNIT = 0.6
+// Carbonate + acid kinetics.
+const CARBONATE_RATE = 0.5 // units per second while acid is present
+const CARBONATE_PEAK = AMBIENT_TEMP + 8 // mildly exothermic
 
 // ── Colour helpers ───────────────────────────────────────────────────────────
 function lerp(a, b, t) {
@@ -22,7 +64,6 @@ function lerp(a, b, t) {
 function lerpColor(c1, c2, t) {
   return { r: lerp(c1.r, c2.r, t), g: lerp(c1.g, c2.g, t), b: lerp(c1.b, c2.b, t) }
 }
-// Sample a colour from an ordered list of [position, hex] stops.
 function sampleStops(stops, x) {
   if (x <= stops[0][0]) return hexToRgb(stops[0][1])
   const last = stops[stops.length - 1]
@@ -40,17 +81,14 @@ function sampleStops(stops, x) {
 
 const WATER = { r: 224, g: 240, b: 250 } // faint watery tint for colourless solutions
 
-// Indicator colour as a function of pH. Returns { rgb, alpha } or null when the
-// indicator is effectively colourless (so the underlying solution shows through).
+// Indicator colour as a function of pH.
 function indicatorColor(kind, ph) {
   if (kind === 'phenolphthalein') {
-    // Colourless in acid/neutral; magenta-pink above ~8.2, deepening to ~10.
     if (ph < 8.2) return null
     const t = Math.min(1, (ph - 8.2) / 1.8)
     return { rgb: hexToRgb('#e91e8c'), alpha: 0.25 + t * 0.6 }
   }
   if (kind === 'litmus') {
-    // Red (acid) → purple (neutral) → blue (alkali).
     const rgb = sampleStops(
       [
         [3, '#d83a2a'],
@@ -64,7 +102,6 @@ function indicatorColor(kind, ph) {
     return { rgb, alpha: 0.7 }
   }
   if (kind === 'universal') {
-    // Full pH rainbow: red→orange→yellow→green→blue→purple.
     const rgb = sampleStops(
       [
         [1, '#e23b2a'],
@@ -97,7 +134,8 @@ function computePH(molesAcid, molesBase, totalVolume) {
 // ── Empty / fresh flask ───────────────────────────────────────────────────────
 export function createState(startTemp = AMBIENT_TEMP) {
   const acc = {
-    contents: {}, // id -> volume (mL)
+    contents: {}, // id -> amount remaining (mL for liquids, "units" for solids)
+    salts: {}, // metal id -> amount dissolved so far (drives salt tints)
     molesAcid: 0, // mmol H+
     molesBase: 0, // mmol OH-
     totalVolume: 0,
@@ -112,14 +150,80 @@ function present(acc, id) {
 function amount(acc, id) {
   return acc.contents[id] || 0
 }
-function hasCategory(acc, cat) {
-  return Object.keys(acc.contents).some(
-    (id) => (acc.contents[id] || 0) > 0 && getChemical(id).category === cat,
-  )
+// Is there actually free acid available to react (H⁺ in excess)?
+function acidAvailable(acc) {
+  return acc.molesAcid - acc.molesBase > 0.02
 }
 
-// Detect precipitation reactions. Each consumes some of a coloured solute, which
-// we report via `consumed` so the dissolved-colour calc can subtract it.
+// ── Time evolution: THE core of realistic behaviour ──────────────────────────
+// Advances all ongoing reactions by `dt` seconds and returns a new accumulator.
+// - reacting metals dissolve, consume acid and drive temp toward their peak
+// - carbonate fizzes CO₂ while acid remains
+// - with nothing reacting the flask slowly cools back to room temperature
+export function reactTick(prevAcc, dt) {
+  const acc = {
+    contents: { ...prevAcc.contents },
+    salts: { ...prevAcc.salts },
+    molesAcid: prevAcc.molesAcid,
+    molesBase: prevAcc.molesBase,
+    totalVolume: prevAcc.totalVolume,
+    temp: prevAcc.temp,
+  }
+
+  let hottestPeak = null
+
+  // Metal + acid reactions (each reacting metal contributes).
+  if (acidAvailable(acc)) {
+    for (const id of Object.keys(METAL_DATA)) {
+      const data = METAL_DATA[id]
+      if (data.rate <= 0) continue // copper: never reacts
+      const remaining = amount(acc, id)
+      if (remaining <= 0) continue
+      const canDissolve = Math.min(remaining, data.rate * dt)
+      const acidNeeded = canDissolve * ACID_PER_METAL_UNIT
+      const acidFree = Math.max(0, acc.molesAcid - acc.molesBase)
+      const scale = acidNeeded > 0 ? Math.min(1, acidFree / acidNeeded) : 0
+      const dissolved = canDissolve * scale
+      if (dissolved <= 0) continue
+      acc.contents[id] = remaining - dissolved
+      acc.molesAcid = Math.max(0, acc.molesAcid - dissolved * ACID_PER_METAL_UNIT)
+      acc.salts[id] = (acc.salts[id] || 0) + dissolved
+      if (hottestPeak === null || data.peak > hottestPeak) hottestPeak = data.peak
+    }
+  }
+
+  // Carbonate + acid → CO₂ (consumes both).
+  if (acidAvailable(acc) && present(acc, 'Sodium carbonate')) {
+    const consumed = Math.min(amount(acc, 'Sodium carbonate'), CARBONATE_RATE * dt)
+    acc.contents['Sodium carbonate'] = amount(acc, 'Sodium carbonate') - consumed
+    acc.molesAcid = Math.max(0, acc.molesAcid - consumed * 0.1)
+    if (hottestPeak === null || CARBONATE_PEAK > hottestPeak) hottestPeak = CARBONATE_PEAK
+  }
+
+  // Catalysed peroxide decomposition (exothermic while both present).
+  if (present(acc, 'Hydrogen peroxide') && present(acc, 'Manganese dioxide')) {
+    const consumed = Math.min(amount(acc, 'Hydrogen peroxide'), 0.35 * dt)
+    acc.contents['Hydrogen peroxide'] = amount(acc, 'Hydrogen peroxide') - consumed
+    if (hottestPeak === null || 38 > hottestPeak) hottestPeak = 38
+  }
+
+  // ── Temperature: gradual rise toward the reaction peak, else slow cooling ──
+  // Rise ~8–12 s to peak; cool over ~1–2 min. Temperature can NEVER exceed the
+  // peak of the hottest reaction currently running.
+  if (hottestPeak !== null && hottestPeak > acc.temp) {
+    const k = 1 - Math.exp(-dt / 3.2) // ≈95% of the way in ~10 s
+    acc.temp += (hottestPeak - acc.temp) * k
+    acc.temp = Math.min(acc.temp, hottestPeak)
+  } else {
+    const k = 1 - Math.exp(-dt / 28) // slow relaxation to room temperature
+    acc.temp += (AMBIENT_TEMP - acc.temp) * k
+    if (Math.abs(acc.temp - AMBIENT_TEMP) < 0.05) acc.temp = AMBIENT_TEMP
+  }
+
+  return acc
+}
+
+// Detect precipitation reactions.
 function detectPrecipitates(acc) {
   const out = []
   const consumed = {}
@@ -138,26 +242,33 @@ function detectPrecipitates(acc) {
   return { precipitates: out, consumed }
 }
 
-// Detect gas-producing reactions → drives rising-bubble particles + sound.
+// Detect gas-producing reactions. STRICT chemistry:
+// - H₂ ONLY while a reactive metal AND free acid are both present
+// - CO₂ ONLY while carbonate AND free acid are both present
+// - O₂ from peroxide decomposition
+// - distilled water NEVER produces gas with anything here
 function detectGas(acc) {
-  // Acid + carbonate → CO2
-  if (present(acc, 'Sodium carbonate') && (hasCategory(acc, CATEGORY.ACID))) {
-    const rate = Math.min(1, Math.min(amount(acc, 'Sodium carbonate'), 4) / 4)
-    return { active: true, name: 'CO₂', rate, foam: false }
+  // Reactive metal + acid → H₂. Rate follows the most vigorous reacting metal.
+  if (acidAvailable(acc)) {
+    let best = 0
+    for (const id of Object.keys(METAL_DATA)) {
+      if (present(acc, id) && METAL_DATA[id].gasRate > best) best = METAL_DATA[id].gasRate
+    }
+    if (best > 0) return { active: true, name: 'H₂', rate: best, foam: false }
+    if (present(acc, 'Sodium carbonate')) {
+      const rate = Math.min(1, Math.min(amount(acc, 'Sodium carbonate'), 4) / 4)
+      return { active: true, name: 'CO₂', rate: Math.max(0.4, rate), foam: false }
+    }
   }
-  // Hydrogen peroxide decomposition → O2 (vigorous with a catalyst)
+  // Hydrogen peroxide decomposition → O₂ (vigorous with a catalyst).
   if (present(acc, 'Hydrogen peroxide')) {
     const catalysed = present(acc, 'Manganese dioxide')
     return { active: true, name: 'O₂', rate: catalysed ? 1 : 0.35, foam: true }
   }
-  // Reactive metal + acid → H2
-  if (present(acc, 'Magnesium ribbon') && hasCategory(acc, CATEGORY.ACID)) {
-    return { active: true, name: 'H₂', rate: 0.8, foam: false }
-  }
   return { active: false, name: null, rate: 0, foam: false }
 }
 
-// Compute the dissolved solution colour (before indicators) from coloured solutes.
+// Compute the dissolved solution colour from coloured solutes + dissolved salts.
 function dissolvedColor(acc, consumed) {
   let r = 0
   let g = 0
@@ -177,8 +288,19 @@ function dissolvedColor(acc, consumed) {
     wsum += w
   }
 
-  // Special case: iodine + starch → intense blue-black complex that visually
-  // dominates the milky starch and amber iodine entirely.
+  // Dissolved metal salts tint the solution (e.g. iron chloride pale green-brown).
+  for (const id of Object.keys(acc.salts || {})) {
+    const data = METAL_DATA[id]
+    if (!data?.saltTint) continue
+    const w = (acc.salts[id] || 0) * data.saltTint.strength * 3
+    if (w <= 0) continue
+    r += data.saltTint.rgb.r * w
+    g += data.saltTint.rgb.g * w
+    b += data.saltTint.rgb.b * w
+    wsum += w
+  }
+
+  // Iodine + starch → intense blue-black complex.
   if (present(acc, 'Iodine solution') && present(acc, 'Starch solution')) {
     const extent = Math.min(amount(acc, 'Iodine solution'), amount(acc, 'Starch solution'))
     const w = (extent + 1) * 12
@@ -196,15 +318,35 @@ function dissolvedColor(acc, consumed) {
   return { rgb: { r: r / wsum, g: g / wsum, b: b / wsum }, colorantConc }
 }
 
+// Visible solids sitting in the flask (metal pieces etc.) for the canvas to draw.
+function detectSolids(acc) {
+  const out = []
+  for (const id of Object.keys(acc.contents)) {
+    const left = acc.contents[id] || 0
+    if (left <= 0.02) continue
+    const chem = getChemical(id)
+    if (!chem.solid) continue
+    const initial = left + (acc.salts?.[id] || 0)
+    out.push({
+      id,
+      kind: id === 'Magnesium ribbon' ? 'ribbon' : id === 'Copper strip' ? 'strip' : 'granules',
+      color: chem.swatch || '#c8ccd4',
+      // 0..1 fraction remaining, so ribbons shorten as they dissolve.
+      remaining: initial > 0 ? Math.min(1, left / initial) : 1,
+      amount: left,
+    })
+  }
+  return out
+}
+
 // Turn an accumulator into the render-ready, observable state.
 export function derive(acc) {
   const ph = computePH(acc.molesAcid, acc.molesBase, acc.totalVolume)
   const { precipitates, consumed } = detectPrecipitates(acc)
   const gas = detectGas(acc)
   const { rgb: dissolved, colorantConc } = dissolvedColor(acc, consumed)
+  const solids = detectSolids(acc)
 
-  // Indicator response — only meaningful when the solution isn't already
-  // strongly coloured by another solute.
   let displayRgb = dissolved
   let displayAlpha = colorantConc > 0 ? 0.2 + colorantConc * 0.75 : 0.32
   if (colorantConc < 0.28) {
@@ -214,7 +356,6 @@ export function derive(acc) {
       if (chem.category !== CATEGORY.INDICATOR) continue
       const ind = indicatorColor(chem.indicator, ph)
       if (ind) {
-        // Blend the (usually colourless) base with the indicator colour.
         displayRgb = lerpColor(dissolved, ind.rgb, 0.85)
         displayAlpha = Math.max(displayAlpha, ind.alpha)
       }
@@ -235,6 +376,7 @@ export function derive(acc) {
     temp: acc.temp,
     volume: acc.totalVolume,
     color: { ...displayRgb, a: displayAlpha },
+    solids,
     precipitate: {
       active: totalPrecip > 0.05,
       color: precipitates[0]?.color || { r: 240, g: 240, b: 245 },
@@ -247,62 +389,75 @@ export function derive(acc) {
   }
 }
 
-// ── The one mutation entry point ──────────────────────────────────────────────
-// Returns { acc, derived, events } where events are one-shot cues for the UI.
+// ── The one mixing entry point ────────────────────────────────────────────────
+// Adding a chemical only MIXES it in. All reaction heat and consumption happen
+// over time in `reactTick`, so temperature can never spike unrealistically no
+// matter how fast the student pours.
 export function addChemical(prevAcc, id, volumeMl) {
   const chem = getChemical(id)
   const acc = {
     contents: { ...prevAcc.contents },
+    salts: { ...prevAcc.salts },
     molesAcid: prevAcc.molesAcid,
     molesBase: prevAcc.molesBase,
     totalVolume: prevAcc.totalVolume,
     temp: prevAcc.temp,
   }
-  acc.contents[id] = (acc.contents[id] || 0) + volumeMl
-  // Solids (metal ribbon, MnO2) don't add liquid volume.
+
+  const amountScale = chem.solid ? 10 : 1
+  acc.contents[id] = (acc.contents[id] || 0) + volumeMl * amountScale
+  // Solids (metal pieces, MnO2) don't add liquid volume.
   if (!chem.solid) acc.totalVolume += volumeMl
 
   if (chem.category === CATEGORY.ACID) acc.molesAcid += (chem.concentration || 0.1) * volumeMl
   if (chem.category === CATEGORY.BASE) acc.molesBase += (chem.concentration || 0.1) * volumeMl
-  if (chem.category === CATEGORY.CARBONATE) acc.molesBase += (chem.concentration || 0.1) * volumeMl
+  if (chem.category === CATEGORY.CARBONATE) acc.molesBase += (chem.concentration || 0.1) * volumeMl * 0.4
 
   const before = derive(prevAcc)
 
-  // ── Heat of reaction ──
-  let tempBump = 0
-  // Neutralization: opposite reagent meeting what's already there.
+  // A gentle, volume-proportional neutralisation warmth (no per-call constants —
+  // that was the source of the old impossible 171 °C readings).
   const neutralizing =
     (chem.category === CATEGORY.BASE && prevAcc.molesAcid > prevAcc.molesBase) ||
     (chem.category === CATEGORY.ACID && prevAcc.molesBase > prevAcc.molesAcid) ||
     (chem.category === CATEGORY.CARBONATE && prevAcc.molesAcid > prevAcc.molesBase)
-  if (neutralizing) tempBump += Math.min(6, volumeMl * 0.18)
-  // Reactive metal + acid (and reverse).
-  if (
-    (chem.category === CATEGORY.METAL && hasCategory(prevAcc, CATEGORY.ACID)) ||
-    (chem.category === CATEGORY.ACID && present(prevAcc, 'Magnesium ribbon'))
-  ) {
-    tempBump += Math.min(10, volumeMl * 0.4 + 2)
-  }
-  // Catalysed peroxide decomposition is exothermic.
-  if (present(acc, 'Hydrogen peroxide') && present(acc, 'Manganese dioxide')) {
-    tempBump += Math.min(8, volumeMl * 0.5 + 1)
-  }
-  acc.temp += tempBump
+  if (neutralizing) acc.temp = Math.min(AMBIENT_TEMP + 6, acc.temp + volumeMl * 0.15)
 
   const after = derive(acc)
-  const events = computeEvents(before, after, acc, tempBump)
+  const events = computeEvents(before, after, acc)
   return { acc, derived: after, events }
 }
 
-// Compare two derived states (plus the resulting accumulator) and return the
-// one-shot cues the UI should fire. Shared by `addChemical` and the pour-end
-// diff in the lab page so the logic lives in exactly one place.
+export function rinse(prevAcc) {
+  const acc = {
+    contents: {},
+    salts: {},
+    molesAcid: 0,
+    molesBase: 0,
+    totalVolume: 0,
+    temp: prevAcc.temp,
+  }
+
+  for (const [id, amount] of Object.entries(prevAcc.contents || {})) {
+    const chem = getChemical(id)
+    if (chem.solid || chem.category === CATEGORY.SALT || chem.category === CATEGORY.CATALYST) {
+      acc.contents[id] = amount
+    }
+  }
+
+  for (const [id, amount] of Object.entries(prevAcc.salts || {})) {
+    acc.salts[id] = amount
+  }
+
+  return { acc, derived: derive(acc), events: [] }
+}
+
+// Compare two derived states and return the one-shot cues the UI should fire.
 export function computeEvents(before, after, acc, tempBump = 0) {
   const events = []
   if (!before.gas.active && after.gas.active) events.push('fizz')
   if (tempBump > 1.5 || (!before.exothermic && after.exothermic)) events.push('hiss')
   if (!before.precipitate.active && after.precipitate.active) events.push('precipitate')
-  // Titration endpoint: crossing into the neutral band with both reagents present.
   const wasOutsideNeutral = before.ph < 6.8 || before.ph > 7.2
   const nowNeutral = after.ph >= 6.8 && after.ph <= 7.2
   const hadTitration = acc.molesAcid > 0 && acc.molesBase > 0
@@ -311,9 +466,7 @@ export function computeEvents(before, after, acc, tempBump = 0) {
   return events
 }
 
-// Relax the flask temperature back toward ambient (call on a timer from the UI).
+// Back-compat cooling helper (now just a thin wrapper over reactTick).
 export function coolStep(acc, dt = 1) {
-  if (acc.temp <= AMBIENT_TEMP) return acc
-  const cooled = AMBIENT_TEMP + (acc.temp - AMBIENT_TEMP) * Math.exp(-0.12 * dt)
-  return { ...acc, temp: cooled < AMBIENT_TEMP + 0.05 ? AMBIENT_TEMP : cooled }
+  return reactTick(acc, dt)
 }

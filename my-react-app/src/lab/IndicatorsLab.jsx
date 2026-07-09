@@ -10,7 +10,7 @@ import { AnimatedNumber, PhScale, GoalTracker } from './Instruments.jsx'
 const FALLBACK = ['HCl', 'NaOH', 'Universal indicator', 'Litmus', 'Phenolphthalein', 'Distilled water']
 
 export default function IndicatorsLab({ lab }) {
-  const { experiment, consultTutor, pushMessage, setProgress, setSummary } = lab
+  const { experiment, setProgress, setSummary } = lab
   const total = experiment?.steps?.length || 4
   const chemicals = experiment?.availableChemicals?.length ? experiment.availableChemicals : FALLBACK
 
@@ -20,21 +20,15 @@ export default function IndicatorsLab({ lab }) {
   const [activeIndicator, setActiveIndicator] = useState('')
 
   const onCommit = useCallback(
-    ({ after, acc, selected }) => {
+    ({ after, acc }) => {
       const ph = after.ph
       const present = Object.keys(acc.contents).filter((id) => acc.contents[id] > 0)
       const inds = present.filter((id) => getChemical(id).category === CATEGORY.INDICATOR)
       inds.forEach((id) => indicatorsRef.current.add(id))
       setActiveIndicator(inds.length ? getChemical(inds[inds.length - 1]).name : '')
 
-      let zone = 'neutral'
-      if (ph < 6.5) {
-        zone = 'acid'
-        zonesRef.current.add('acid')
-      } else if (ph > 7.5) {
-        zone = 'base'
-        zonesRef.current.add('base')
-      }
+      if (ph < 6.5) zonesRef.current.add('acid')
+      else if (ph > 7.5) zonesRef.current.add('base')
 
       const g = {
         indicator: indicatorsRef.current.size >= 1,
@@ -46,21 +40,8 @@ export default function IndicatorsLab({ lab }) {
       const completed = Object.values(g).filter(Boolean).length
       setProgress({ completed: Math.min(total, completed), total })
       setSummary({ finalPH: Number(ph.toFixed(1)), precisionAchieved: g.acid && g.base })
-
-      const name = getChemical(selected).name
-      const zoneText =
-        zone === 'acid'
-          ? `acidic — pH ${ph.toFixed(1)}`
-          : zone === 'base'
-            ? `alkaline — pH ${ph.toFixed(1)}`
-            : `close to neutral — pH ${ph.toFixed(1)}`
-      pushMessage('student', `I added ${name}. The reading is now pH ${ph.toFixed(1)}.`)
-      consultTutor('', `added ${name}; the solution is now ${zoneText}`, {
-        chemicals: present,
-        currentPH: Number(ph.toFixed(1)),
-      })
     },
-    [total, consultTutor, pushMessage, setProgress, setSummary],
+    [total, setProgress, setSummary],
   )
 
   const sim = useBeaker({ onCommit })
@@ -71,8 +52,7 @@ export default function IndicatorsLab({ lab }) {
     setGoals({ indicator: false, acid: false, base: false, compared: false })
     setActiveIndicator('')
     sim.reset()
-    setProgress({ completed: 0, total })
-    pushMessage('tutor', 'Flask rinsed with fresh water. Add an indicator, then try an acid and an alkali to sweep the whole pH scale.')
+    setProgress({ completed: Math.max(0, Math.min(total, 1)), total })
   }
 
   const ph = sim.readout.ph
@@ -117,10 +97,11 @@ export default function IndicatorsLab({ lab }) {
       <BeakerStage
         sim={sim}
         chemicals={chemicals}
-        hint="Add an indicator first, then pour acid or alkali to move the pH."
+        hint="Add an indicator first, then pour acid or alkali to move the pH. To compare a different indicator, use the start-over button below."
         readouts={readouts}
         extra={extra}
         onReset={reset}
+        resetLabel="↺ Start a fresh comparison"
       />
     </div>
   )
