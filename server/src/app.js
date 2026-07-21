@@ -21,8 +21,10 @@ function createApp() {
   app.use(
     cors({
       origin(origin, callback) {
-        // Allow tools with no origin (curl, mobile apps) and any allow-listed origin.
-        if (!origin || config.clientOrigins.includes(origin)) return callback(null, true);
+        // Allow tools with no origin (curl, mobile apps), any allow-listed origin,
+        // and local dev origins from Vite/React on localhost or 127.0.0.1.
+        const isLocalDevOrigin = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin || '');
+        if (!origin || config.clientOrigins.includes(origin) || isLocalDevOrigin) return callback(null, true);
         return callback(new Error(`Origin ${origin} not allowed by CORS`));
       },
       credentials: true,

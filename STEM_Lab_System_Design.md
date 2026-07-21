@@ -10,28 +10,28 @@
 4. System Architecture
 5. Frontend Structure & All HTML Pages
 6. Backend Structure
-7. Simulation Engine Design
-8. AI Tutor Architecture
+7. Simulation Engine Design//Moving well
+8. AI Tutor Architecture// Not available at the moment
 9. Database Design
 10. Folder Structure
 11. User Flow & UI/UX Guide
 12. Implementation Roadmap (Week-by-Week)
-13. Month 1 / Month 3 / Month 6 Milestones
-14. MVP Experiment: Acid-Base Titration — Full Build Plan
-15. What the Final Product Looks Like
-16. Potential Challenges & Solutions
-17. Gamification System
-18. Startup Path
+13. Month 1 / Month 3 / Month 6 Milestones//Not yet solidified.Will be solidified after the project goes live on the internet
+14. MVP Experiment: Acid-Base Titration — Full Build Plan//Not the MVP as of now and the experiment implementation is still i the works because we have not found the best way to implement this
+15. What the Final Product Looks Like// A scientific Laboratory but jus virtual at the moment
+16. Potential Challenges & Solutions//Might need some money to get this started honestly
+17. Gamification System/ getting there to be honest
+18. Startup Path/ Not yet solidified at the moment though
 
 ---
 
 ## 1. Project Overview
 
-**What you are building:** A web application where students anywhere in the world open a browser, pick a science experiment, interact with a realistic digital simulation, and receive real-time guidance from an AI science teacher — all for free, on any phone or computer.
+**What we are building?** A web application where students anywhere in the world open a browser, log into a Virtual Science Laboratory, pick the topic they want to dig deep into, read some material on that topic, get into the lab to visualise what they read and also what they might have learnt in school, interact with a realistic digital simulation, and (receive real-time guidance from an AI science teacher)-Not available at the moment, — all for free, on any phone or computer. 
 
-**The core problem you solve:** Students in developing countries memorize experiments instead of performing them, because their schools lack labs, chemicals, and equipment. Your platform gives every student a real lab in their pocket.
+**My inspiration for building this project:** Students in developing countries memorize experiments instead of performing them, because their schools lack labs, chemicals, and equipment. The platform gives every student a real lab in their pocket.
 
-**Why this is buildable by a beginner:** Every piece of this system uses JavaScript — the language you already know. The frontend is React (organized JavaScript). The backend is Node.js + Express (you already know Node). The simulations are JavaScript objects and a drawing library. The AI is an API call.
+<!-- **Why this is buildable by a beginner:** Every piece of this system uses JavaScript — the language you already know. The frontend is React (organized JavaScript). The backend is Node.js + Express (you already know Node). The simulations are JavaScript objects and a drawing library. The AI is an API call. -->
 
 ---
 

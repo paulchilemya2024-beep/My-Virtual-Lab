@@ -7,7 +7,7 @@ const config = {
   mongoUri: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/stem-lab',
   jwtSecret: process.env.JWT_SECRET || 'dev-only-insecure-secret-change-me',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  clientOrigins: (process.env.CLIENT_ORIGINS || 'http://localhost:5173')
+  clientOrigins: (process.env.CLIENT_ORIGINS || 'http://localhost:5173,http://localhost:3003')
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean),
