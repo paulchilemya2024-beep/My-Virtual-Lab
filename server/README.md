@@ -2,8 +2,7 @@
 
 Node.js + Express + MongoDB backend for the Virtual STEM Lab, built to the
 [System Design document](../STEM_Lab_System_Design.md). It provides
-authentication, experiment data, an AI science tutor (Google Gemini), and
-progress/gamification tracking.
+authentication, experiment data, and progress/gamification tracking.
 
 ## Tech stack
 
@@ -12,7 +11,7 @@ progress/gamification tracking.
 | Web framework | Express |
 | Database | MongoDB Atlas via Mongoose |
 | Auth | jsonwebtoken + bcryptjs |
-| AI tutor | @google/generative-ai (Gemini 1.5 Flash) |
+| Security | helmet, express-rate-limit |
 | Config / CORS | dotenv, cors |
 
 ## Folder structure
@@ -26,8 +25,7 @@ server/
 │   ├── config/             # env.js (config), db.js (Mongo connection)
 │   ├── models/             # User, Experiment, Session, Progress (Mongoose)
 │   ├── middleware/         # auth (JWT), error handling, async wrapper
-│   ├── routes/             # auth, experiments, agent, progress
-│   ├── agent/tutor.js      # Gemini integration + system prompt + fallback
+│   ├── routes/             # auth, experiments, progress
 │   ├── utils/              # token.js (JWT), gamification.js (XP/ranks/badges)
 │   └── data/experiments.json   # seed data (titration, circuit, osmosis)
 ├── .env.example
@@ -46,8 +44,6 @@ Fill in `.env`:
 - **MONGODB_URI** — free cluster from [MongoDB Atlas](https://mongodb.com/atlas), or a local MongoDB.
 - **JWT_SECRET** — any long random string. Generate one:
   `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`
-- **GEMINI_API_KEY** — free key from [Google AI Studio](https://aistudio.google.com).
-  *Optional* — leave blank and the tutor uses built-in rule-based replies.
 
 Seed the experiments, then run:
 
@@ -72,13 +68,6 @@ All responses are JSON. Protected routes need an `Authorization: Bearer <token>`
 |---|---|---|
 | GET | `/` | List all. Supports `?subject=chemistry` and `?search=titration`. |
 | GET | `/:id` | Full experiment (steps, reactions, success criteria). |
-
-### AI Tutor — `/api/agent`
-| Method | Path | Body |
-|---|---|---|
-| POST | `/ask` 🔒 | `{ experimentId, studentLevel?, currentStep?, chemicals?, temperature?, currentPH?, lastAction?, reactionResult?, question? }` |
-
-Returns `{ reply, source }` where `source` is `"gemini"` or `"fallback"`.
 
 ### Progress — `/api/progress`
 | Method | Path | Notes |

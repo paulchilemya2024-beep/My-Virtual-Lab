@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const config = require('./config/env');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 const { badgeCatalog } = require('./utils/gamification');
@@ -14,6 +16,7 @@ function createApp() {
   const app = express();
 
   // --- Core middleware ---
+  app.use(helmet());
   app.use(express.json());
   app.use(
     cors({
@@ -26,6 +29,17 @@ function createApp() {
     })
   );
   if (!config.isProduction) app.use(morgan('dev'));
+
+  // Throttle login/register specifically — the routes credential-stuffing bots target.
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many attempts. Please try again later.' },
+  });
+  app.use('/api/auth/register', authLimiter);
+  app.use('/api/auth/login', authLimiter);
 
   // --- Health check (used by UptimeRobot to keep Render awake) ---
   app.get('/api/health', (req, res) => {

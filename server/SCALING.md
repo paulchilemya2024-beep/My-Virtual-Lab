@@ -1,9 +1,9 @@
 # Scaling notes — how this backend handles millions of users
 
-A common misconception is that "using linked lists and hash maps" is what makes
+<!-- A common misconception is that "using linked lists and hash maps" is what makes
 a web service scale. In practice, the data structures matter only in specific
 hot paths — the **big** scaling wins come from architecture. Here is what this
-backend actually does, in order of impact.
+backend actually does, in order of impact. -->
 
 ## 1. Stateless authentication (biggest win)
 Login state lives in a signed **JWT**, not in server memory. That means **any**
