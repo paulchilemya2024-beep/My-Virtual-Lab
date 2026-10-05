@@ -12,6 +12,22 @@ const config = {
     .map((origin) => origin.trim())
     .filter(Boolean),
   isProduction: process.env.NODE_ENV === 'production',
+
+  // The AI tutor (server/src/routes/tutor.js) is entirely optional — with no
+  // key set, the route replies with a clean "not configured" error instead of
+  // crashing, so the rest of the app works the same with or without it.
+  geminiApiKey: process.env.GEMINI_API_KEY || '',
+  // A free-tier "flash-lite" model — cheapest/fastest Gemini tier, good
+  // daily quota, no card on file. Verified directly against the live
+  // ListModels endpoint for this key (Google renames/retires these model IDs
+  // more often than the blog posts about them get updated — if this ever
+  // 404s again, query https://generativelanguage.googleapis.com/v1beta/models
+  // with your key to see the current real names rather than guessing).
+  geminiModel: process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite',
+  // Hard daily safety cap, kept comfortably under Gemini's free-tier limit so
+  // a traffic spike degrades to a friendly message instead of silently
+  // exhausting the whole account's free quota for the rest of the day.
+  tutorDailyBudget: Number(process.env.TUTOR_DAILY_BUDGET) || 1400,
 };
 
 // A loud warning in production if the secret was never set — easy mistake to make.

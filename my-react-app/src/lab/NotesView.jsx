@@ -1,15 +1,22 @@
 import { useEffect, useMemo, useState } from 'react'
+import ExplainerPlayer from '../math/ExplainerPlayer.jsx'
+import { explainerFor } from '../math/explainers/index.js'
 
-const SUBJECT_LABEL = { chemistry: 'Chemistry', physics: 'Physics', biology: 'Biology' }
+const SUBJECT_LABEL = { chemistry: 'Chemistry', physics: 'Physics', biology: 'Biology', mathematics: 'Mathematics' }
 const SENTENCE_SPLIT = /[^.!?]+[.!?]+|\S+$/g
 
 // Part A — the reading page shown before every experiment. Renders the
 // curriculum notes, reads them aloud with the Web Speech API (highlighting the
 // sentence currently being spoken), and only advances to the experiment when
 // the student clicks through — never auto-skipped on a first visit.
+//
+// When a lab has an animated explainer, that plays the concept through instead
+// of the read-aloud bar, and the written notes stay below it as the reference
+// a student can re-read at their own pace.
 export default function NotesView({ experiment, content, onStart }) {
   const notes = content?.notes
   const keyTerms = notes?.keyTerms || []
+  const explainer = explainerFor(experiment._id || experiment.id)
 
   const [playing, setPlaying] = useState(false)
   const [activeSentence, setActiveSentence] = useState(-1)
@@ -114,18 +121,24 @@ export default function NotesView({ experiment, content, onStart }) {
       </span>
       <h1 className="notes-title">{experiment.title}</h1>
 
-      <div className="audio-player-bar">
-        <button type="button" className="audio-play-btn" onClick={togglePlay} aria-label={playing ? 'Pause narration' : 'Play narration'}>
-          {playing ? '⏸' : '▶'}
-        </button>
-        <div className="audio-progress-track">
-          <div
-            className="audio-progress-fill"
-            style={{ width: sentenceTexts.length ? `${((activeSentence + 1) / sentenceTexts.length) * 100}%` : '0%' }}
-          />
+      {explainer ? (
+        <ExplainerPlayer explainer={explainer} />
+      ) : (
+        <div className="audio-player-bar">
+          <button type="button" className="audio-play-btn" onClick={togglePlay} aria-label={playing ? 'Pause narration' : 'Play narration'}>
+            {playing ? '⏸' : '▶'}
+          </button>
+          <div className="audio-progress-track">
+            <div
+              className="audio-progress-fill"
+              style={{ width: sentenceTexts.length ? `${((activeSentence + 1) / sentenceTexts.length) * 100}%` : '0%' }}
+            />
+          </div>
+          <span className="audio-label">Listen to this section</span>
         </div>
-        <span className="audio-label">Listen to this section</span>
-      </div>
+      )}
+
+      {explainer && <h2 className="notes-read-heading">The same idea, in writing</h2>}
 
       {taggedSections.map((section, i) => (
         <section key={i} className="notes-section">

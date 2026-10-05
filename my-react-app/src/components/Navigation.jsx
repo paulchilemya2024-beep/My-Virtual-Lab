@@ -27,6 +27,9 @@ export default function Navigation() {
             <NavLink to="/labs" className="nav-link">
               Labs
             </NavLink>
+            <NavLink to="/board" className="nav-link">
+              Board
+            </NavLink>
             {isAuthenticated ? (
               <>
                 <NavLink to="/dashboard" className="nav-link">
@@ -82,6 +85,9 @@ export default function Navigation() {
         <div className="mobile-menu-links">
           <NavLink to="/labs" className="nav-link" onClick={toggleMenu}>
             Labs
+          </NavLink>
+          <NavLink to="/board" className="nav-link" onClick={toggleMenu}>
+            Board
           </NavLink>
           {isAuthenticated ? (
             <>

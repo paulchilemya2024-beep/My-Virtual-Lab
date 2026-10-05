@@ -77,7 +77,9 @@ export default function ProjectileLab({ lab }) {
   const hitOnceRef = useRef(false)
 
   // ── Step-completion tracking (order-independent, matches the rest of the app) ──
-  const gravitiesTestedRef = useRef(new Set(['earth']))
+  // State, not a ref: the checklist and the step counter both read this, and a
+  // mutated ref would leave them stale until an unrelated re-render happened.
+  const [gravitiesTested, setGravitiesTested] = useState(() => new Set(['earth']))
   const previewTimerRef = useRef(0)
   const [previewViewed, setPreviewViewed] = useState(false)
 
@@ -99,8 +101,8 @@ export default function ProjectileLab({ lab }) {
   )
 
   useEffect(() => {
-    recomputeProgress(attempts, hitCount, gravitiesTestedRef.current.size)
-  }, [attempts, hitCount, previewViewed, recomputeProgress])
+    recomputeProgress(attempts, hitCount, gravitiesTested.size)
+  }, [attempts, hitCount, gravitiesTested, previewViewed, recomputeProgress])
 
   // A slider moved while not flying → after 3s of no further change, step 1 completes.
   useEffect(() => {
@@ -113,9 +115,13 @@ export default function ProjectileLab({ lab }) {
   useEffect(() => {
     stateRef.current.target = target
   }, [target])
-  useEffect(() => {
-    gravitiesTestedRef.current.add(gravityId)
-  }, [gravityId])
+  // Switching planet is recorded where it happens rather than in an effect
+  // watching gravityId. Returning the same Set for a planet already visited
+  // avoids a re-render when the student flips back and forth.
+  const chooseGravity = useCallback((id) => {
+    setGravityId(id)
+    setGravitiesTested((prev) => (prev.has(id) ? prev : new Set(prev).add(id)))
+  }, [])
 
   const launch = useCallback(() => {
     if (stateRef.current.flying) return
@@ -688,7 +694,7 @@ export default function ProjectileLab({ lab }) {
     { label: 'Launch one shot', done: attempts.length >= 1 },
     { label: 'Try several angles', done: attempts.length >= 4 },
     { label: 'Compare complementary angles', done: complementaryAnglesFound },
-    { label: 'Test another planet', done: gravitiesTestedRef.current.size >= 2 },
+    { label: 'Test another planet', done: gravitiesTested.size >= 2 },
     { label: 'Hit the target', done: hitCount >= 1 },
   ]
 
@@ -756,7 +762,7 @@ export default function ProjectileLab({ lab }) {
       </div>
       <div className="control-group">
         <label>Gravity: g = {gravity} m/s²</label>
-        <select className="form-input gravity-select" value={gravityId} onChange={(e) => setGravityId(e.target.value)} disabled={flying}>
+        <select className="form-input gravity-select" value={gravityId} onChange={(e) => chooseGravity(e.target.value)} disabled={flying}>
           {GRAVITIES.map((gr) => (
             <option key={gr.id} value={gr.id}>{gr.emoji} {gr.name} — {gr.g} m/s²</option>
           ))}

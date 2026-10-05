@@ -445,5 +445,117 @@
       "Track the exchange between kinetic and potential energy"
     ],
     "successCriteria": { "gravitiesCompared": 2 }
+  },
+  {
+    "_id": "derivatives",
+    "title": "The Derivative: Tangent Tracer",
+    "subject": "mathematics",
+    "difficulty": 3,
+    "description": "Drag a point along a curve and watch its derivative graph draw itself underneath. See a secant line collapse into a tangent as h shrinks toward zero.",
+    "estimatedTime": 25,
+    "icon": "📈",
+    "availableChemicals": [],
+    "availableVariables": ["function", "x", "h"],
+    "reactions": {},
+    "steps": [
+      { "stepNumber": 1, "instruction": "Drag the point along the curve and watch the tangent line tilt.", "hint": "The tangent is the straight line that just grazes the curve at that point." },
+      { "stepNumber": 2, "instruction": "Shrink the secant gap h below 0.1 and compare the two slopes.", "hint": "The derivative IS the limit of the secant slope as h approaches 0." },
+      { "stepNumber": 3, "instruction": "Sweep across the range until you have traced most of the f′ graph.", "hint": "Each position of the point contributes one dot to the derivative curve below." },
+      { "stepNumber": 4, "instruction": "Find a stationary point, where the tangent is perfectly flat.", "hint": "A flat tangent means f′(x) = 0 — look for where the lower graph crosses the axis." },
+      { "stepNumber": 5, "instruction": "Visit a rising section and a falling section of the curve.", "hint": "Rising means f′ > 0; falling means f′ < 0. Check the sign in the lower pane." },
+      { "stepNumber": 6, "instruction": "Switch to a second function and predict its derivative before tracing it.", "hint": "Try e^(−x/2) — its derivative is a scaled copy of itself." }
+    ],
+    "learningObjectives": [
+      "Define the derivative as the limit of the difference quotient as h approaches 0",
+      "Read f′(x) as the slope of the tangent line at x",
+      "Connect the sign of f′ to whether f is increasing or decreasing",
+      "Identify stationary points as the zeros of f′",
+      "Recognise the derivative as a function in its own right, not a single number"
+    ],
+    "successCriteria": { "goalsCompleted": 6 }
+  },
+  {
+    "_id": "riemann",
+    "title": "Riemann Sums & the Fundamental Theorem",
+    "subject": "mathematics",
+    "difficulty": 4,
+    "description": "Shade the area under a curve with rectangles, watch the sum converge as you add more of them, then sweep an endpoint to build the accumulation function — and reveal why its derivative lands exactly on the original curve.",
+    "estimatedTime": 30,
+    "icon": "∫",
+    "availableChemicals": [],
+    "availableVariables": ["function", "n", "method", "x"],
+    "reactions": {},
+    "steps": [
+      { "stepNumber": 1, "instruction": "Drag the endpoint to shade the area under the curve.", "hint": "The shaded rectangles are the Riemann sum between the left edge and your endpoint." },
+      { "stepNumber": 2, "instruction": "Raise the number of strips, n, until the sum stops changing.", "hint": "More, thinner strips make the flat-topped rectangles hug the curve more closely." },
+      { "stepNumber": 3, "instruction": "Sweep across most of the range to trace the accumulation graph below.", "hint": "Each position of the endpoint contributes one point to A(x), the running total." },
+      { "stepNumber": 4, "instruction": "Try the left, right, midpoint and trapezoid methods on the same n.", "hint": "Midpoint and trapezoid converge faster — their errors mostly cancel instead of adding up." },
+      { "stepNumber": 5, "instruction": "Press Reveal and sweep again to overlay A′(x) onto f(x).", "hint": "A′(x) is computed from the accumulation graph you just built — watch it land on the original curve." },
+      { "stepNumber": 6, "instruction": "Switch to a second function and repeat the reveal.", "hint": "Try e^(−x/2) — you have already met its rate of change in the derivative lab." }
+    ],
+    "learningObjectives": [
+      "Define a Riemann sum as an approximation to the area under a curve",
+      "Explain why midpoint and trapezoid sums converge faster than left or right sums",
+      "Build the accumulation function A(x) = ∫ₐˣ f(t) dt as a running total",
+      "State the Fundamental Theorem of Calculus: A′(x) = f(x)",
+      "Recognise integration as the reverse of differentiation"
+    ],
+    "successCriteria": { "goalsCompleted": 6 }
+  },
+  {
+    "_id": "derivative-rules",
+    "title": "Derivative Rules: Product & Chain",
+    "subject": "mathematics",
+    "difficulty": 4,
+    "description": "Watch a rectangle grow to see where the product rule comes from, then watch a train of linked dials spin to see where the chain rule comes from — and verify both by overlaying an independently computed curve on top of the rule itself.",
+    "estimatedTime": 30,
+    "icon": "⚙️",
+    "availableChemicals": [],
+    "availableVariables": ["mode", "x", "deltaX"],
+    "reactions": {},
+    "steps": [
+      { "stepNumber": 1, "instruction": "In Product Rule mode, drag x and watch the rectangle's width and height both change.", "hint": "Area = width × height. Both dimensions are changing as x changes." },
+      { "stepNumber": 2, "instruction": "Shrink Δx and watch the corner sliver disappear faster than the other two.", "hint": "The corner depends on BOTH changes at once — it shrinks as Δx², not Δx." },
+      { "stepNumber": 3, "instruction": "Reveal the rule overlay and sweep x to confirm A′(x) = w′h + wh′.", "hint": "The gold curve is built purely from the rule — watch it trace exactly over the measured curve." },
+      { "stepNumber": 4, "instruction": "Switch to Chain Rule mode and drag x to spin the dials.", "hint": "x drives u = g(x), and u drives y = f(u) — three linked rates." },
+      { "stepNumber": 5, "instruction": "Reveal the rule overlay and sweep x to confirm y′(x) = f′(g(x))·g′(x).", "hint": "Multiply the two individual rates — the outer dial's true speed matches it exactly." },
+      { "stepNumber": 6, "instruction": "Compare what made each rule work — one rule to a vanishing corner, the other to multiplying rates.", "hint": "Both rules were confirmed the same way: two independent calculations landing on the same curve." }
+    ],
+    "learningObjectives": [
+      "Derive the product rule from the three pieces of area added when both dimensions grow",
+      "Explain why the Δw·Δh term vanishes in the limit while the other two survive",
+      "Derive the chain rule as the product of two linked rates of change",
+      "Apply both rules to functions built from simpler pieces",
+      "Verify a differentiation rule numerically by comparing it against direct differentiation"
+    ],
+    "successCriteria": { "goalsCompleted": 6 }
+  },
+  {
+    "_id": "limits",
+    "title": "Limits & Continuity Explorer",
+    "subject": "mathematics",
+    "difficulty": 3,
+    "description": "Drag a point toward another and watch two independent viewports zoom in on the same spot — one on the full graph, one magnified up to 100x around the point of interest — to see which functions flatten into a line, which have a hole, which jump, and which run off to infinity.",
+    "estimatedTime": 25,
+    "icon": "🔎",
+    "availableChemicals": [],
+    "availableVariables": ["function", "x", "zoom"],
+    "reactions": {},
+    "steps": [
+      { "stepNumber": 1, "instruction": "Drag x toward a from the left, then from the right, on the smooth function.", "hint": "Watch the left-limit and right-limit readouts both head toward the same number." },
+      { "stepNumber": 2, "instruction": "Push the zoom slider past ×50 and watch the curve flatten.", "hint": "A smooth function looks like a straight line once you zoom in close enough." },
+      { "stepNumber": 3, "instruction": "Switch to the hole function and zoom in on its point of interest.", "hint": "The limit exists even though the function itself is undefined there — watch for the open circle." },
+      { "stepNumber": 4, "instruction": "Switch to the jump function and zoom in as far as it goes.", "hint": "Unlike the hole, this gap never closes — the left and right limits disagree at every zoom level." },
+      { "stepNumber": 5, "instruction": "Switch to the asymptote function and zoom in near its point of interest.", "hint": "The curve keeps running off the screen at any zoom — this is a genuinely unbounded, infinite discontinuity." },
+      { "stepNumber": 6, "instruction": "Visit all four functions and identify each one's classification badge.", "hint": "Continuous, removable (hole), jump, or infinite — four different reasons a limit can or cannot describe what a function does." }
+    ],
+    "learningObjectives": [
+      "Define the limit of a function at a point using left- and right-hand approach",
+      "Distinguish a function's value at a point from its limit at that point",
+      "Classify a discontinuity as removable, jump, or infinite from numerical evidence",
+      "Connect local flattening under zoom to the idea of differentiability",
+      "State the three conditions required for continuity at a point"
+    ],
+    "successCriteria": { "goalsCompleted": 6 }
   }
 ]

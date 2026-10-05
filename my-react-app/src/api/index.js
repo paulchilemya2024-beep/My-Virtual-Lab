@@ -24,3 +24,10 @@ export const progressApi = {
   me: () => request('/api/progress/me', { auth: true }),
   badges: () => request('/api/progress/badges/me', { auth: true }),
 }
+
+export const tutorApi = {
+  // No auth: true here — anyone on the labs list should see whether the
+  // tutor is available, before they ever log in.
+  status: () => request('/api/tutor/status'),
+  ask: (payload) => request('/api/tutor/ask', { method: 'POST', body: payload, auth: true }),
+}

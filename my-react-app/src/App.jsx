@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage.jsx'
 import DashboardPage from './pages/DashboardPage.jsx'
 import LabsPage from './pages/LabsPage.jsx'
 import LabPage from './pages/LabPage.jsx'
+import BoardPage from './pages/BoardPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import RegisterPage from './pages/RegisterPage.jsx'
 import ResultsPage from './pages/ResultsPage.jsx'
@@ -17,6 +18,9 @@ function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/labs" element={<LabsPage />} />
+          {/* The board is a local drawing tool — nothing leaves the browser,
+              so it stays open to instructors and students alike. */}
+          <Route path="/board" element={<BoardPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 

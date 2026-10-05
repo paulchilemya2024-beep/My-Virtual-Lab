@@ -12,10 +12,16 @@ import IndicatorsLab from '../lab/IndicatorsLab.jsx'
 import PrecipitationLab from '../lab/PrecipitationLab.jsx'
 import MetalAcidLab from '../lab/MetalAcidLab.jsx'
 import PeroxideLab from '../lab/PeroxideLab.jsx'
+import DerivativeLab from '../lab/DerivativeLab.jsx'
+import RiemannLab from '../lab/RiemannLab.jsx'
+import DerivativeRulesLab from '../lab/DerivativeRulesLab.jsx'
+import LimitsLab from '../lab/LimitsLab.jsx'
 import { EXPERIMENT_CONTENT } from '../lab/experimentContent.js'
 import NotesView from '../lab/NotesView.jsx'
 import QuestionsView from '../lab/QuestionsView.jsx'
 import StepsPanel from '../lab/StepsPanel.jsx'
+import { useTutor } from '../math/useTutor.js'
+import TutorPanel from '../math/TutorPanel.jsx'
 
 // Maps an experiment _id to the simulation component that runs it. Every
 // experiment gets its OWN dedicated component so nothing silently reuses the
@@ -32,6 +38,10 @@ const SIM_BY_ID = {
   precipitation: PrecipitationLab,
   'metal-acid': MetalAcidLab,
   'catalysis-peroxide': PeroxideLab,
+  derivatives: DerivativeLab,
+  riemann: RiemannLab,
+  'derivative-rules': DerivativeRulesLab,
+  limits: LimitsLab,
 }
 
 const PHASES = [
@@ -98,9 +108,15 @@ export default function LabPage() {
     summaryRef.current = { ...summaryRef.current, ...obj }
   }, [])
 
-  // The API handed to every simulation component. No AI tutor — sims report
-  // their own progress/mistakes and the StepsPanel reads them back.
-  const lab = { experiment, setProgress, addMistake, setSummary }
+  // One tutor instance per lab visit — labId is available from the route
+  // immediately, before `experiment` itself has loaded, so this can sit
+  // above the loading/error early-returns below like every other hook here.
+  const tutor = useTutor({ experimentId: labId })
+
+  // The API handed to every simulation component. Sims report their own
+  // progress/mistakes/goals, and now also notify the tutor — they never call
+  // the backend directly, only lab.tutor.notifyGoal/notifyIdle/ask.
+  const lab = { experiment, setProgress, addMistake, setSummary, tutor }
 
   async function handleSubmit() {
     setSubmitting(true)
@@ -114,6 +130,13 @@ export default function LabPage() {
         startedAt: startedAt.current,
         completedAt: new Date().toISOString(),
         precisionAchieved: !!summaryRef.current.precisionAchieved,
+        // The backend scores overshoot at 2 points per mL; sims that measure a
+        // target volume report it through setSummary.
+        volumeOvershot: summaryRef.current.volumeOvershot || 0,
+        // The tutor conversation this session, if the tutor was enabled and
+        // used — the backend tallies the student's own turns toward the
+        // "great questions" badge and stores the rest on the session record.
+        aiConversation: tutor.history,
       })
       navigate('/results', {
         state: { result, experimentTitle: experiment?.title, finalPH: summaryRef.current.finalPH },
@@ -174,7 +197,10 @@ export default function LabPage() {
                 </div>
               )}
             </div>
-            <StepsPanel experiment={experiment} progress={progress} onFinish={() => setPhase('questions')} />
+            <div className="experiment-sidebar">
+              <StepsPanel experiment={experiment} progress={progress} onFinish={() => setPhase('questions')} />
+              <TutorPanel tutor={tutor} />
+            </div>
           </div>
         )}
 

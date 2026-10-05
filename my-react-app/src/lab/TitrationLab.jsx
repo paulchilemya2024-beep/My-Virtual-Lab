@@ -1,28 +1,55 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { titrationPH, titrationTemp, EQUIVALENCE_ML, DROP_ML, V_ACID_L, C_ACID } from './titration.js'
-import { chemicalSwatch } from './chemicals.js'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  BURETTE_CAPACITY_ML,
+  C_ACID,
+  C_BASE,
+  DROP_ML,
+  DROPS_OF_INDICATOR,
+  PIPETTE_ML,
+  createFlask,
+  equivalenceForFlask,
+  flaskPH,
+  flaskTemp,
+  flaskVolumeML,
+} from './titration.js'
+import { getChemical, chemicalSwatch } from './chemicals.js'
 import SoundEngine from './sound.js'
 import LabCanvas from './LabCanvas.jsx'
 import { AnimatedNumber, Thermometer } from './Instruments.jsx'
 import TitrationCurve from './TitrationCurve.jsx'
+import Burette from './Burette.jsx'
 
-// Dedicated acid–base neutralisation (titration): the flask starts COMPLETELY
-// EMPTY — no liquid, pH "--", 0.0 mL. The student must explicitly add 25 mL of
-// HCl before anything else can happen; only then does the fixed acid reservoir
-// exist and the burette (NaOH) become available. Because the acid is a large
-// reservoir, early NaOH additions barely move the pH; the dramatic S-curve only
-// appears within ~1 mL of the 25 mL equivalence point. See titration.js.
+// Acid–base titration, built to Section 14 of the System Design document.
+//
+// The student performs every step themselves: they pick a reagent off the shelf,
+// pick the right instrument for it, and deliver it into the flask — measuring
+// the 25 mL of acid with their own hand and eye. Nothing is done for them and no
+// step completes without the action that earns it.
+//
+//   1. Add 25 mL of HCl to the flask     — pipette it, or free-pour and judge it
+//   2. Add 3 drops of phenolphthalein    — dropper, one drop per press
+//   3. Fill the burette with NaOH        — funnel
+//   4. Open the stopcock, add NaOH       — press and hold the stopcock
+//   5. Watch the meter and the colour    — record what you observe
+//   6. Stop at the endpoint              — record the final result
+//
+// Choosing the wrong reagent or the wrong tool is allowed, produces a visible
+// consequence, and is logged to the mistake log rather than blocked.
+//
+// Chemistry lives in titration.js and works from what is ACTUALLY in the flask,
+// so over-measuring the acid genuinely moves the equivalence point.
 
-const MAX_BASE = 40 // mL — a little past equivalence for the "levelled off" region
-const POUR_RATE = 1.0 // mL/s when holding the burette open (hold-to-pour)
 const AMBIENT = 22
+const FLASK_CAPACITY_ML = 150 // conical flask — plenty of headroom over 50 mL
+const CANVAS_FULL_ML = 60 // volume at which the drawn flask reads full
 
-// Phenolphthalein: colourless in acid/neutral, magenta-pink above pH 8.2.
-function phColor(ph) {
-  if (ph < 8.2) return { r: 236, g: 245, b: 252, a: 0.34 }
-  const t = Math.min(1, (ph - 8.2) / 1.8)
-  return { r: 233, g: 30, b: 140, a: 0.4 + t * 0.45 }
-}
+// The instruments on the bench. `use` names what each is for, and is shown to
+// the student — picking the wrong one is a teachable mistake, not a trap.
+const TOOLS = [
+  { id: 'pipette', label: 'Pipette', icon: '💉', use: `Transfers exactly ${PIPETTE_ML} mL — for measuring the analyte` },
+  { id: 'dropper', label: 'Dropper', icon: '💧', use: `One ${DROP_ML} mL drop per press — for the indicator` },
+  { id: 'funnel', label: 'Funnel', icon: '🔻', use: 'For filling the burette without spilling' },
+]
 
 const EMPTY_TARGET = {
   volume: 0,
@@ -34,44 +61,124 @@ const EMPTY_TARGET = {
   solids: [],
 }
 
-function makeTarget(baseAdded, ph) {
-  return {
-    volume: 25 + baseAdded,
-    color: phColor(ph),
-    gas: { active: false, foam: false, rate: 0, name: null },
-    precipitate: { active: false, color: { r: 240, g: 240, b: 245 }, amount: 0 },
-    exothermic: false,
-    danger: false,
-    solids: [],
-  }
+// Phenolphthalein: colourless below pH 8.2, magenta-pink above. With no
+// indicator in the flask the solution stays clear however far you titrate —
+// skipping step 2 costs you the visual endpoint, exactly as on a real bench.
+function liquidColor(ph, indicatorDrops) {
+  if (ph == null) return { r: 255, g: 255, b: 255, a: 0 }
+  if (indicatorDrops <= 0 || ph < 8.2) return { r: 236, g: 245, b: 252, a: 0.34 }
+  const t = Math.min(1, (ph - 8.2) / 1.8)
+  // More indicator gives a deeper colour, which is why 3 drops is the spec.
+  const strength = Math.min(1, indicatorDrops / DROPS_OF_INDICATOR)
+  return { r: 233, g: 30, b: 140, a: (0.35 + t * 0.45) * strength }
+}
+
+function describeColour(ph, indicatorDrops) {
+  if (ph == null) return 'empty'
+  if (indicatorDrops <= 0) return 'clear and colourless (no indicator)'
+  if (ph < 8.2) return 'colourless'
+  if (ph < 9) return 'faint pink'
+  return 'deep pink'
 }
 
 export default function TitrationLab({ lab }) {
-  const { experiment, setProgress, setSummary } = lab
+  const { experiment, setProgress, setSummary, addMistake } = lab
   const totalSteps = experiment?.steps?.length || 6
-  const ph0 = titrationPH(0)
+  const phWindow = experiment?.successCriteria?.finalPH || { min: 6.8, max: 7.2 }
 
-  const [hasAcid, setHasAcid] = useState(false)
-  const [readout, setReadout] = useState({ ph: null, temp: AMBIENT, naohAdded: 0, total: 0 })
+  const [flask, setFlask] = useState(createFlask)
+  const [buretteML, setBuretteML] = useState(0) // NaOH remaining in the burette
+  const [delivered, setDelivered] = useState(0) // NaOH delivered from it so far
+  const [reagent, setReagent] = useState('')
+  const [tool, setTool] = useState('')
+  const [flow, setFlow] = useState(2)
+  const [muted, setMuted] = useState(false)
+  const [observations, setObservations] = useState([])
+  const [readings, setReadings] = useState([])
+  const [finalResult, setFinalResult] = useState(null)
   const [points, setPoints] = useState([])
   const [reached, setReached] = useState(false)
-  const [muted, setMuted] = useState(false)
-  const [workInProgress, setWorkInProgress] = useState(true)
 
-  const hasAcidRef = useRef(false)
-  const baseRef = useRef(0)
-  const lastPhRef = useRef(ph0)
-  const reachedRef = useRef(false)
-  const lastPlottedRef = useRef(0)
-  const lastSyncRef = useRef(0)
-  const soundRef = useRef(null)
+  // Refs are the source of truth for anything the pour loops mutate many times a
+  // second; the state above mirrors them for rendering. Reading a value back out
+  // of a setState updater does not work — React queues updaters rather than
+  // running them inline — so the arithmetic has to happen here.
+  const flaskRef = useRef(createFlask())
+  const buretteRef = useRef(0)
+  const deliveredRef = useRef(0)
+
   const targetRef = useRef(EMPTY_TARGET)
+  const soundRef = useRef(null)
+  const fizzTimerRef = useRef(0)
+  const lastSyncRef = useRef(0)
+  const reachedRef = useRef(false)
+  const obsIdRef = useRef(0)
 
-  // Sound engine (pour trickle + endpoint chime).
+  const ph = flaskPH(flask)
+  const temp = flaskTemp(flask, AMBIENT)
+  const volume = flaskVolumeML(flask)
+  const equivalence = equivalenceForFlask(flask)
+
+  // ── Step completion. Every flag is the consequence of a real action. ──
+  const steps = useMemo(
+    () => ({
+      1: flask.hclML >= 24.5 && flask.hclML <= 25.5,
+      2: flask.indicatorDrops >= DROPS_OF_INDICATOR,
+      3: buretteML > 0 || delivered > 0,
+      4: delivered > 0,
+      5: readings.length >= 1,
+      6: finalResult?.accepted === true,
+    }),
+    [flask, buretteML, delivered, readings.length, finalResult],
+  )
+  const completedSteps = useMemo(() => Object.values(steps).filter(Boolean).length, [steps])
+
+  useEffect(() => {
+    setProgress({ completed: completedSteps, total: totalSteps })
+  }, [completedSteps, totalSteps, setProgress])
+
+  // Repaint the drawn flask straight from the refs. Cheap, no React involved, so
+  // the canvas stays smooth even while the state mirror below is throttled.
+  const refreshTarget = useCallback(() => {
+    const f = flaskRef.current
+    const current = flaskPH(f)
+    targetRef.current = {
+      ...targetRef.current,
+      volume: Math.min(CANVAS_FULL_ML, flaskVolumeML(f)) * (30 / CANVAS_FULL_ML),
+      color: liquidColor(current, f.indicatorDrops),
+      exothermic: current != null && f.naohML > 0 && f.hclML > 0,
+    }
+  }, [])
+
+  // Mirror the refs into React state for the readouts. Throttled to ~10 Hz while
+  // a pour is running — the numbers stay legible and we avoid a re-render per
+  // frame — then forced once the student lets go.
+  const syncFlask = useCallback(
+    ({ force = true } = {}) => {
+      refreshTarget()
+      const now = performance.now()
+      if (!force && now - lastSyncRef.current < 100) return
+      lastSyncRef.current = now
+      setFlask({ ...flaskRef.current })
+      setBuretteML(buretteRef.current)
+      setDelivered(deliveredRef.current)
+    },
+    [refreshTarget],
+  )
+
+  // Live mirror of the selection for the canvas' animation loop.
+  const liveRef = useRef({ reagent })
+  useEffect(() => {
+    liveRef.current = { reagent }
+  })
+
   useEffect(() => {
     soundRef.current = new SoundEngine()
     const engine = soundRef.current
-    return () => engine.dispose()
+    return () => {
+      window.clearTimeout(fizzTimerRef.current)
+      engine.dispose()
+    }
   }, [])
   useEffect(() => {
     soundRef.current?.setMuted(muted)
@@ -79,227 +186,430 @@ export default function TitrationLab({ lab }) {
 
   const getTarget = useCallback(() => targetRef.current, [])
 
-  const syncReadout = useCallback(() => {
-    if (!hasAcidRef.current) {
-      setReadout({ ph: null, temp: AMBIENT, naohAdded: 0, total: 0 })
+  const observe = useCallback((text, tone = 'info') => {
+    obsIdRef.current += 1
+    const entry = { id: obsIdRef.current, text, tone }
+    setObservations((prev) => [...prev.slice(-40), entry])
+  }, [])
+
+  // A short burst of bubbles — the design doc's "if wrong chemicals mixed,
+  // bubbles animate" feedback.
+  const fizz = useCallback(() => {
+    targetRef.current = { ...targetRef.current, gas: { active: true, foam: true, rate: 0.85, name: 'gas' } }
+    soundRef.current?.play?.('bubbles')
+    window.clearTimeout(fizzTimerRef.current)
+    fizzTimerRef.current = window.setTimeout(() => {
+      targetRef.current = { ...targetRef.current, gas: { active: false, foam: false, rate: 0, name: null } }
+    }, 2500)
+  }, [])
+
+  const logMistake = useCallback(
+    (step, action, advice) => {
+      addMistake?.({ step, action })
+      observe(`${action} ${advice}`, 'warn')
+    },
+    [addMistake, observe],
+  )
+
+  // ── Adding a reagent to the flask ────────────────────────────────────────
+  // `amount` in mL; `viaDrops` counts indicator drops instead of volume.
+  const addToFlask = useCallback(
+    (name, amount, { silent = false, force = true } = {}) => {
+      const f = flaskRef.current
+      if (flaskVolumeML(f) + amount > FLASK_CAPACITY_ML) return
+      if (name === 'Phenolphthalein') f.indicatorDrops += Math.round(amount / DROP_ML)
+      else if (name === 'HCl') f.hclML += amount
+      else if (name === 'NaOH') f.naohML += amount
+      else f.waterML += amount
+      syncFlask({ force })
+      if (!silent) soundRef.current?.resume()
+    },
+    [syncFlask],
+  )
+
+  // Using the selected instrument with the selected reagent. This is where most
+  // of the teaching happens: the right pairing does the job, the wrong pairing
+  // does something visibly wrong and says why.
+  function useTool() {
+    if (!reagent || !tool) return
+    const name = getChemical(reagent).name
+    soundRef.current?.resume()
+
+    if (tool === 'funnel') {
+      if (reagent !== 'NaOH') {
+        logMistake(3, `Used the funnel to put ${name} in the burette.`, 'The burette holds the titrant — that is the NaOH.')
+        fizz()
+        return
+      }
+      buretteRef.current = BURETTE_CAPACITY_ML
+      syncFlask()
+      soundRef.current?.clink()
+      observe(`Burette filled to ${BURETTE_CAPACITY_ML.toFixed(1)} mL with ${C_BASE} M NaOH and zeroed.`, 'ok')
       return
     }
-    const v = baseRef.current
-    setReadout({ ph: titrationPH(v), temp: titrationTemp(v, AMBIENT), naohAdded: v, total: 25 + v })
-  }, [])
 
-  // Add curve points up to `toV` on a 0.1 mL grid (plus the exact endpoint), so
-  // even a 5 mL "fast pour" still reveals the S-curve shape.
-  const plotTo = useCallback((toV) => {
-    setPoints((prev) => {
-      const last = lastPlottedRef.current
-      if (toV <= last + 1e-9) return prev
-      const added = []
-      const startTenths = Math.round((last + 0.1) * 10)
-      for (let th = startTenths; th / 10 <= toV + 1e-9; th++) {
-        const v = th / 10
-        added.push({ v, ph: titrationPH(v) })
+    if (tool === 'pipette') {
+      if (reagent === 'Phenolphthalein') {
+        logMistake(2, `Pipetted ${PIPETTE_ML} mL of indicator into the flask.`, 'The indicator is used three drops at a time — a dropper is the tool for it.')
+        addToFlask(reagent, PIPETTE_ML)
+        fizz()
+        return
       }
-      const lastV = added.length ? added[added.length - 1].v : last
-      if (Math.abs(lastV - toV) > 1e-6) added.push({ v: Number(toV.toFixed(2)), ph: titrationPH(toV) })
-      if (added.length === 0) return prev
-      const next = [...prev, ...added]
-      return next.length > 800 ? next.slice(next.length - 800) : next
-    })
-    lastPlottedRef.current = toV
-  }, [])
-
-  // ── Step 1: add the fixed 25 mL of 0.1 M HCl. Before this the flask is
-  // visually and numerically empty — no liquid, pH "--", 0.0 mL. ──
-  const addAcid = useCallback(() => {
-    if (hasAcidRef.current) return
-    hasAcidRef.current = true
-    setHasAcid(true)
-    baseRef.current = 0
-    lastPhRef.current = ph0
-    lastPlottedRef.current = 0
-    targetRef.current = makeTarget(0, ph0)
-    setPoints([{ v: 0, ph: ph0 }])
-    setReadout({ ph: ph0, temp: AMBIENT, naohAdded: 0, total: 25 })
-    setProgress({ completed: 1, total: totalSteps })
-    soundRef.current?.resume()
-    soundRef.current?.clink()
-  }, [ph0, totalSteps, setProgress])
-
-  // Core: set the total base volume, update the flask target, and detect the
-  // equivalence-point crossing.
-  const applyBase = useCallback(
-    (newV) => {
-      const clamped = Math.max(0, Math.min(MAX_BASE, newV))
-      if (Math.abs(clamped - baseRef.current) < 1e-9) return
-      baseRef.current = clamped
-      const ph = titrationPH(clamped)
-      targetRef.current = makeTarget(clamped, ph)
-
-      const prevPh = lastPhRef.current
-      const crossedUp = prevPh < 7 && ph >= 7
-      if (!reachedRef.current && (crossedUp || (ph >= 6.9 && ph <= 7.1))) {
-        reachedRef.current = true
-        setReached(true)
-        soundRef.current?.play('endpoint')
-        setSummary({ precisionAchieved: true, finalPH: Number(ph.toFixed(2)) })
+      if (reagent === 'NaOH') {
+        logMistake(4, `Pipetted ${PIPETTE_ML} mL of NaOH straight into the flask.`, 'The titrant must come from the burette so you can measure how much you added.')
+        addToFlask(reagent, PIPETTE_ML)
+        fizz()
+        return
       }
-      lastPhRef.current = ph
+      addToFlask(reagent, PIPETTE_ML)
+      soundRef.current?.clink()
+      observe(
+        reagent === 'HCl'
+          ? `Pipetted ${PIPETTE_ML.toFixed(1)} mL of ${C_ACID} M HCl into the conical flask.`
+          : `Pipetted ${PIPETTE_ML.toFixed(1)} mL of ${name} into the flask.`,
+        'ok',
+      )
+      return
+    }
 
-      const frac = Math.min(1, clamped / EQUIVALENCE_ML)
-      const completed = reachedRef.current
-        ? totalSteps
-        : Math.max(1, Math.min(totalSteps - 1, Math.round(frac * (totalSteps - 1))))
-      setProgress({ completed, total: totalSteps })
-    },
-    [totalSteps, setProgress, setSummary],
-  )
+    if (tool === 'dropper') {
+      addToFlask(reagent, DROP_ML)
+      if (reagent === 'Phenolphthalein') {
+        const next = flask.indicatorDrops + 1
+        observe(
+          next < DROPS_OF_INDICATOR
+            ? `Drop ${next} of phenolphthalein added — ${DROPS_OF_INDICATOR - next} to go. No colour change; the flask is acidic.`
+            : `Drop ${next} of phenolphthalein added. Still colourless — that is expected in acid.`,
+          'ok',
+        )
+        return
+      }
+      if (reagent === 'HCl') {
+        logMistake(1, 'Added the acid one drop at a time.', `A dropper cannot measure ${PIPETTE_ML} mL — use the pipette, or pour and watch the volume.`)
+        return
+      }
+      logMistake(4, `Dropped ${name} straight into the flask.`, 'The titrant belongs in the burette.')
+      fizz()
+    }
+  }
 
-  // ── Discrete additions (the burette buttons) ──
-  const addBase = useCallback(
-    (delta) => {
-      if (!hasAcidRef.current) return
-      soundRef.current?.resume()
-      const from = baseRef.current
-      const newV = Math.min(MAX_BASE, from + delta)
-      if (newV <= from) return
-      applyBase(newV)
-      plotTo(newV)
-      syncReadout()
-    },
-    [applyBase, plotTo, syncReadout],
-  )
-
-  // ── Hold-to-pour the burette (continuous, animated) ──
+  // ── Free pour: press and hold the flask to pour the selected reagent ──
   const handlePourStart = useCallback(() => {
-    if (!hasAcidRef.current) return
+    const { reagent: sel } = liveRef.current
+    if (!sel) return
     soundRef.current?.resume()
   }, [])
+
   const handlePourTick = useCallback(
     (dt) => {
-      if (!hasAcidRef.current) return
-      const newV = Math.min(MAX_BASE, baseRef.current + POUR_RATE * dt)
-      applyBase(newV)
-      const now = performance.now()
-      if (now - lastSyncRef.current > 100) {
-        lastSyncRef.current = now
-        syncReadout()
-      }
-      if (baseRef.current - lastPlottedRef.current >= 0.1) plotTo(baseRef.current)
+      const { reagent: sel } = liveRef.current
+      if (!sel) return
+      addToFlask(sel, 3.0 * dt, { silent: true, force: false })
     },
-    [applyBase, plotTo, syncReadout],
+    [addToFlask],
   )
+
   const handlePourEnd = useCallback(() => {
-    if (!hasAcidRef.current) return
-    plotTo(baseRef.current)
-    syncReadout()
-  }, [plotTo, syncReadout])
+    const { reagent: sel } = liveRef.current
+    if (!sel) return
+    const current = flaskRef.current
+    const name = getChemical(sel).name
+    if (sel === 'HCl') {
+      const v = current.hclML
+      if (v > 25.5) logMistake(1, `Poured ${v.toFixed(1)} mL of HCl — over the ${PIPETTE_ML} mL the method calls for.`, 'Equivalence has moved with it; pour more slowly, or use the pipette.')
+      else if (v >= 24.5) observe(`${v.toFixed(1)} mL of HCl in the flask — well measured. The pH meter reads ${(flaskPH(current) ?? 0).toFixed(2)}.`, 'ok')
+      else observe(`${v.toFixed(1)} mL of HCl so far — short of ${PIPETTE_ML} mL.`, 'info')
+      return
+    }
+    if (sel === 'NaOH') {
+      logMistake(4, 'Poured NaOH straight into the flask.', 'You cannot measure the titrant that way — it must run from the burette.')
+      fizz()
+      return
+    }
+    observe(`Added ${name} to the flask. Volume is now ${flaskVolumeML(current).toFixed(1)} mL.`, 'info')
+  }, [fizz, logMistake, observe])
+
+  // ── The burette stopcock ─────────────────────────────────────────────────
+  const deliverBase = useCallback(
+    (amount, { force = true } = {}) => {
+      const given = Math.min(buretteRef.current, amount)
+      if (given <= 0) return
+
+      buretteRef.current -= given
+      deliveredRef.current += given
+      flaskRef.current.naohML += given
+      syncFlask({ force })
+
+      const nextPh = flaskPH(flaskRef.current)
+      if (!reachedRef.current && nextPh != null && nextPh >= 7) {
+        reachedRef.current = true
+        setReached(true)
+        soundRef.current?.play?.('endpoint')
+      }
+
+      // Plot the curve the student is actually walking, not the ideal one.
+      const v = Number(deliveredRef.current.toFixed(2))
+      setPoints((pts) => {
+        if (pts.length && Math.abs(pts[pts.length - 1].v - v) < 0.02) return pts
+        const appended = [...pts, { v, ph: nextPh ?? 7 }]
+        return appended.length > 800 ? appended.slice(appended.length - 800) : appended
+      })
+    },
+    [syncFlask],
+  )
+
+  const handleStopcockTick = useCallback(
+    (dt) => {
+      deliverBase(0.35 * flow * dt, { force: false })
+    },
+    [deliverBase, flow],
+  )
+
+  // Releasing the stopcock flushes whatever the throttle was holding back.
+  const handleStopcockEnd = useCallback(() => {
+    syncFlask({ force: true })
+  }, [syncFlask])
+
+  // ── Recording results (design doc step 8) ────────────────────────────────
+  function recordReading() {
+    if (ph == null) return
+    setReadings((prev) => [
+      ...prev,
+      {
+        n: prev.length + 1,
+        burette: Number(delivered.toFixed(2)),
+        ph: Number(ph.toFixed(2)),
+        colour: describeColour(ph, flask.indicatorDrops),
+      },
+    ])
+    soundRef.current?.play?.('beep')
+    observe(`Reading recorded: ${delivered.toFixed(2)} mL delivered, pH ${ph.toFixed(2)}, solution ${describeColour(ph, flask.indicatorDrops)}.`, 'ok')
+  }
+
+  function recordFinalResult() {
+    if (ph == null) return
+    const accepted = ph >= phWindow.min && ph <= phWindow.max
+    const overshoot = Math.max(0, delivered - equivalence)
+
+    if (!accepted) {
+      logMistake(
+        6,
+        `Called the endpoint at ${delivered.toFixed(2)} mL (pH ${ph.toFixed(2)}).`,
+        ph < phWindow.min
+          ? 'Still acidic — there is unreacted HCl left. Keep going, one drop at a time.'
+          : `You are past neutral into excess base. The endpoint was behind you, near ${equivalence.toFixed(1)} mL.`,
+      )
+      setFinalResult({ accepted: false, ph: Number(ph.toFixed(2)), volume: Number(delivered.toFixed(2)) })
+      return
+    }
+
+    if (flask.indicatorDrops < DROPS_OF_INDICATOR) {
+      logMistake(2, 'Reached the endpoint without the full three drops of indicator.', 'You had to rely on the meter alone — the colour change is your check in a real lab.')
+    }
+
+    setFinalResult({ accepted: true, ph: Number(ph.toFixed(2)), volume: Number(delivered.toFixed(2)) })
+    setSummary({ precisionAchieved: true, finalPH: Number(ph.toFixed(2)), volumeOvershot: Number(overshoot.toFixed(2)) })
+    soundRef.current?.play?.('endpoint')
+    observe(
+      `Endpoint recorded: ${delivered.toFixed(2)} mL of NaOH neutralised ${flask.hclML.toFixed(1)} mL of HCl at pH ${ph.toFixed(2)}. Theory says ${equivalence.toFixed(2)} mL — you were ${Math.abs(delivered - equivalence).toFixed(2)} mL out.`,
+      'ok',
+    )
+  }
 
   function resetExperiment() {
-    hasAcidRef.current = false
-    setHasAcid(false)
-    baseRef.current = 0
-    lastPhRef.current = ph0
+    window.clearTimeout(fizzTimerRef.current)
+    flaskRef.current = createFlask()
+    buretteRef.current = 0
+    deliveredRef.current = 0
+    syncFlask()
+    setReagent('')
+    setTool('')
+    setObservations([])
+    setReadings([])
+    setFinalResult(null)
+    setPoints([])
+    setReached(false)
     reachedRef.current = false
-    lastPlottedRef.current = 0
     targetRef.current = EMPTY_TARGET
     soundRef.current?.stopPour?.()
     soundRef.current?.stopBubbles?.()
-    setReached(false)
-    setPoints([])
-    setReadout({ ph: null, temp: AMBIENT, naohAdded: 0, total: 0 })
+    setSummary({ precisionAchieved: false, volumeOvershot: 0 })
     setProgress({ completed: 0, total: totalSteps })
-    setSummary({ precisionAchieved: false })
   }
 
-  const phClass = readout.ph == null ? '' : readout.ph < 6 ? 'ph-acid' : readout.ph > 8 ? 'ph-base' : 'ph-neutral'
-  const acidMmol = (C_ACID * V_ACID_L * 1000).toFixed(1)
+  const reagents = experiment?.availableChemicals?.length
+    ? experiment.availableChemicals
+    : ['HCl', 'NaOH', 'Phenolphthalein', 'Distilled water']
+  const phClass = ph == null ? '' : ph < 6 ? 'ph-acid' : ph > 8 ? 'ph-base' : 'ph-neutral'
+  const selectedTool = TOOLS.find((t) => t.id === tool)
 
   return (
     <div className="sim titration-lab">
-      <div className="lab-visualization">
-        <LabCanvas
-          getTarget={getTarget}
-          streamColor={chemicalSwatch('NaOH')}
-          canPour={hasAcid}
-          onPourStart={handlePourStart}
-          onPourTick={handlePourTick}
-          onPourEnd={handlePourEnd}
-          soundRef={soundRef}
+      <div className="titration-apparatus">
+        <Burette
+          remainingML={buretteML}
+          deliveredML={delivered}
+          capacityML={BURETTE_CAPACITY_ML}
+          onTick={handleStopcockTick}
+          onRelease={handleStopcockEnd}
+          onDrop={() => deliverBase(DROP_ML)}
+          disabled={buretteML <= 0}
+          flow={flow}
+          onFlowChange={setFlow}
         />
-        <p className="pour-hint">
-          {hasAcid
-            ? `Flask: 25 mL of 0.1 M HCl (${acidMmol} mmol) + phenolphthalein. Hold the flask to open the burette, or use the buttons below. Equivalence is at ${Math.round(EQUIVALENCE_ML)} mL.`
-            : 'The flask is empty. Add 25 mL of hydrochloric acid to begin.'}
-        </p>
+
+        <div className="lab-visualization">
+          <LabCanvas
+            getTarget={getTarget}
+            streamColor={reagent ? chemicalSwatch(reagent) : null}
+            canPour={!!reagent}
+            onPourStart={handlePourStart}
+            onPourTick={handlePourTick}
+            onPourEnd={handlePourEnd}
+            soundRef={soundRef}
+          />
+          <p className="pour-hint">
+            {reagent
+              ? `Press and hold the flask to pour ${getChemical(reagent).name} freehand — or use an instrument below for a measured amount.`
+              : 'Pick a reagent from the shelf, then either hold the flask to pour it or use an instrument.'}
+          </p>
+        </div>
       </div>
 
-      {hasAcid && <TitrationCurve points={points} reached={reached} />}
-
-      {workInProgress && (
-        <div className="reaction-banner" style={{ marginBottom: '12px' }}>
-          🚧 Work in progress: this titration activity is being tested and may be updated as we refine the experience.
-        </div>
-      )}
+      {(delivered > 0 || points.length > 1) && <TitrationCurve points={points} reached={reached} />}
 
       <div className="sim-readouts">
         <div className="readout-chip">
           <span className="readout-label">pH meter</span>
-          {readout.ph == null ? (
-            <span className="readout-value">--</span>
-          ) : (
-            <AnimatedNumber className={`readout-value ${phClass}`} value={readout.ph} decimals={2} />
-          )}
-          <span className="readout-sub">{readout.ph == null ? 'no liquid yet' : readout.ph < 6.9 ? 'Acidic' : readout.ph > 7.1 ? 'Basic' : 'Neutral'}</span>
+          {ph == null ? <span className="readout-value">--</span> : <AnimatedNumber className={`readout-value ${phClass}`} value={ph} decimals={2} />}
+          <span className="readout-sub">{ph == null ? 'flask empty' : ph < 6.9 ? 'Acidic' : ph > 7.1 ? 'Basic' : 'Neutral'}</span>
         </div>
         <div className="readout-chip thermo-chip">
           <span className="readout-label">Temp</span>
-          <AnimatedNumber className="readout-value" value={readout.temp} decimals={1} suffix=" °C" />
-          <Thermometer temp={readout.temp} />
+          <AnimatedNumber className="readout-value" value={temp} decimals={1} suffix=" °C" />
+          <Thermometer temp={temp} />
         </div>
         <div className="readout-chip">
-          <span className="readout-label">Flask volume</span>
-          <AnimatedNumber className="readout-value" value={readout.total} decimals={1} suffix=" mL" />
-          <span className="readout-sub">{hasAcid ? `${readout.naohAdded.toFixed(2)} mL NaOH added` : 'empty'}</span>
+          <span className="readout-label">Flask</span>
+          <AnimatedNumber className="readout-value" value={volume} decimals={1} suffix=" mL" />
+          <span className="readout-sub">{flask.hclML > 0 ? `${flask.hclML.toFixed(1)} mL acid · ${flask.indicatorDrops} drops` : 'empty'}</span>
+        </div>
+        <div className="readout-chip">
+          <span className="readout-label">Colour</span>
+          <span className="readout-value readout-text">{describeColour(ph, flask.indicatorDrops)}</span>
         </div>
       </div>
 
-      {!hasAcid ? (
-        <>
-          <h2>Step 1 — add the acid</h2>
-          <button type="button" className="btn btn-primary btn-full btn-sm" onClick={addAcid}>
-            🧪 Add 25 mL of 0.1 M HCl to the flask
-          </button>
-        </>
-      ) : (
-        <>
-          <h2>Burette controls</h2>
-          <div className="titration-buttons">
-            <button type="button" className="btn btn-outline btn-sm" onClick={() => addBase(DROP_ML)}>
-              💧 1 drop (+{DROP_ML} mL)
-            </button>
-            <button type="button" className="btn btn-outline btn-sm" onClick={() => addBase(1)}>
-              Slow pour (+1 mL)
-            </button>
-            <button type="button" className="btn btn-outline btn-sm" onClick={() => addBase(5)}>
-              Fast pour (+5 mL)
-            </button>
-            <button
-              type="button"
-              className={`btn btn-sm btn-outline mute-btn ${muted ? 'is-muted' : ''}`}
-              onClick={() => setMuted((m) => !m)}
-              aria-pressed={muted}
-            >
-              {muted ? '🔇' : '🔊'}
-            </button>
+      {/* ── The bench: what you have, and what you pick up to use it ── */}
+      <section className="bench">
+        <div className="bench-col">
+          <h2>Reagents</h2>
+          <div className="chemical-panel">
+            {reagents.map((name) => (
+              <button
+                key={name}
+                type="button"
+                className={`chemical-item ${reagent === name ? 'selected' : ''}`}
+                onClick={() => setReagent(name)}
+                title={getChemical(name).hint}
+              >
+                <span className="chemical-swatch" style={{ backgroundColor: chemicalSwatch(name) }} />
+                {getChemical(name).name}
+              </button>
+            ))}
           </div>
-          <p className="titration-tip">
-            Tip: near {Math.round(EQUIVALENCE_ML)} mL, switch to single drops — one drop can swing the pH from 4 to 10.
+        </div>
+
+        <div className="bench-col">
+          <h2>Instruments</h2>
+          <div className="tool-panel">
+            {TOOLS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                className={`tool-item ${tool === t.id ? 'selected' : ''}`}
+                onClick={() => setTool(t.id)}
+                title={t.use}
+              >
+                <span className="tool-icon" aria-hidden="true">{t.icon}</span>
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <p className="tool-use">{selectedTool ? selectedTool.use : 'Pick the instrument that suits the job.'}</p>
+          <button type="button" className="btn btn-primary btn-full btn-sm" onClick={useTool} disabled={!reagent || !tool}>
+            {reagent && tool ? `Use the ${selectedTool.label.toLowerCase()} with ${getChemical(reagent).name}` : 'Choose a reagent and an instrument'}
+          </button>
+        </div>
+      </section>
+
+      {/* ── What you can see happening, as it happens ── */}
+      <section className="observations">
+        <div className="observations-head">
+          <h2>Observations</h2>
+          <button type="button" className="btn btn-outline btn-sm" onClick={recordReading} disabled={ph == null}>
+            📋 Record a reading
+          </button>
+          <button
+            type="button"
+            className={`btn btn-sm btn-outline mute-btn ${muted ? 'is-muted' : ''}`}
+            onClick={() => setMuted((m) => !m)}
+            aria-pressed={muted}
+          >
+            {muted ? '🔇' : '🔊'}
+          </button>
+        </div>
+        <ul className="observation-log" aria-live="polite">
+          {observations.length === 0 && <li className="observation-empty">Nothing has happened yet. Start by measuring your acid into the flask.</li>}
+          {observations.slice(-8).map((o) => (
+            <li key={o.id} className={`observation-line tone-${o.tone}`}>
+              {o.tone === 'warn' ? '⚠️' : o.tone === 'ok' ? '✓' : '•'} {o.text}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* ── The results table the student fills in themselves ── */}
+      <section className="results-record">
+        <h2>Your results</h2>
+        {readings.length === 0 ? (
+          <p className="text-muted results-empty">No readings yet. Record one whenever you see something worth noting.</p>
+        ) : (
+          <table className="readings-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>NaOH (mL)</th>
+                <th>pH</th>
+                <th>Colour</th>
+              </tr>
+            </thead>
+            <tbody>
+              {readings.map((r) => (
+                <tr key={r.n}>
+                  <td>{r.n}</td>
+                  <td>{r.burette.toFixed(2)}</td>
+                  <td>{r.ph.toFixed(2)}</td>
+                  <td>{r.colour}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        {finalResult?.accepted ? (
+          <p className="final-result is-ok">
+            ✓ Endpoint: {finalResult.volume.toFixed(2)} mL of {C_BASE} M NaOH at pH {finalResult.ph.toFixed(2)} · theoretical {equivalence.toFixed(2)} mL
           </p>
-        </>
-      )}
+        ) : (
+          <button type="button" className="btn btn-primary btn-full btn-sm" onClick={recordFinalResult} disabled={ph == null || delivered <= 0}>
+            🎯 Record this as my endpoint
+          </button>
+        )}
+      </section>
+
       <button type="button" className="btn btn-outline btn-full btn-sm" onClick={resetExperiment}>
-        ↺ Empty &amp; reset flask
+        ↺ Rinse &amp; start over
       </button>
     </div>
   )

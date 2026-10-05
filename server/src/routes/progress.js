@@ -78,6 +78,15 @@ router.post(
     progress.rank = rankForXP(progress.totalXP);
     progress.lastActive = new Date();
 
+    // Tally how many questions the student actually asked the AI tutor this
+    // session (not its replies) toward the lifetime count the "great
+    // questions" badge checks. aiConversation was always accepted and saved
+    // here — this is the one line that was missing to make that badge real.
+    const studentTurns = Array.isArray(aiConversation)
+      ? aiConversation.filter((turn) => turn?.role === 'student').length
+      : 0;
+    progress.questionsAsked = (progress.questionsAsked || 0) + studentTurns;
+
     // Work out which new badges were earned with this session.
     const durationMinutes =
       session.completedAt && session.startedAt

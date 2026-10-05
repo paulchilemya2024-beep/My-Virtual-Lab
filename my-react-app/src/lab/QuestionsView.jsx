@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Whiteboard from '../board/Whiteboard.jsx'
 
 // Part C — shown after the experiment. 4–6 hardcoded, curriculum-aligned
 // questions (never AI-generated) mixing multiple choice, true/false and short
@@ -7,6 +8,10 @@ export default function QuestionsView({ experiment, content, onFinish }) {
   const questions = content?.questions || []
   const [answers, setAnswers] = useState(() => questions.map(() => null))
   const [submitted, setSubmitted] = useState(false)
+  // Scratch board for working a question out by hand. Each experiment keeps its
+  // own board so notes from the titration questions don't bleed into osmosis.
+  const [scratchOpen, setScratchOpen] = useState(false)
+  const experimentId = experiment._id || experiment.id
 
   function setAnswer(i, value) {
     if (submitted) return
@@ -32,6 +37,27 @@ export default function QuestionsView({ experiment, content, onFinish }) {
     <div className="questions-view">
       <h1 className="notes-title">Check your understanding</h1>
       <p className="text-muted">{experiment.title} — answer every question, then submit to see your results.</p>
+
+      <button
+        type="button"
+        className={`btn btn-outline btn-sm scratch-toggle ${scratchOpen ? 'is-open' : ''}`}
+        onClick={() => setScratchOpen((open) => !open)}
+        aria-expanded={scratchOpen}
+      >
+        {scratchOpen ? '✕ Close scratch board' : '✎ Open scratch board'}
+      </button>
+
+      {scratchOpen && (
+        <div className="scratch-panel">
+          <Whiteboard
+            storageKey={`stemlab.board.scratch.${experimentId}`}
+            fileName={`${experimentId}-scratch`}
+            dense
+            allowFullscreen={false}
+            onClose={() => setScratchOpen(false)}
+          />
+        </div>
+      )}
 
       {questions.map((q, i) => (
         <div key={i} className="question-card">

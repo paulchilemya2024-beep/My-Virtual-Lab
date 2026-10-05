@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { experimentsApi } from '../api/index.js'
 
-const subjects = ['All', 'Chemistry', 'Physics', 'Biology']
-const SUBJECT_EMOJI = { chemistry: '🧪', physics: '⚡', biology: '🧬' }
+const subjects = ['All', 'Chemistry', 'Physics', 'Biology', 'Mathematics']
+const SUBJECT_EMOJI = { chemistry: '🧪', physics: '⚡', biology: '🧬', mathematics: '📐' }
 
 // Format minutes -> "25 min"; difficulty number -> a Beginner/Intermediate/Advanced label.
 const levelForDifficulty = (d) => (d <= 1 ? 'Beginner' : d <= 3 ? 'Intermediate' : 'Advanced')

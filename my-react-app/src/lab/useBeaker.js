@@ -43,6 +43,15 @@ export function useBeaker({ onCommit, maxVolume = 30 }) {
     setReadout(targetRef.current)
   }, [])
 
+  const getTarget = useCallback(() => targetRef.current, [])
+
+  // Declared above every hook that calls it. The reaction clock below reaches
+  // for this on each tick, so it must not be a `const` further down the file.
+  const setTargetFromAcc = useCallback((acc) => {
+    targetRef.current = { ...derive(acc), resetNonce: resetNonceRef.current }
+    return targetRef.current
+  }, [])
+
   // Sound engine + the reaction clock. Reactions evolve over real time: metals
   // dissolve and consume acid, temperature climbs gradually toward the reaction
   // peak and cools back to room temperature afterwards.
@@ -62,18 +71,11 @@ export function useBeaker({ onCommit, maxVolume = 30 }) {
       clearInterval(clock)
       engine.dispose()
     }
-  }, [syncReadout])
+  }, [syncReadout, setTargetFromAcc])
 
   useEffect(() => {
     soundRef.current?.setMuted(muted)
   }, [muted])
-
-  const getTarget = useCallback(() => targetRef.current, [])
-
-  const setTargetFromAcc = useCallback((acc) => {
-    targetRef.current = { ...derive(acc), resetNonce: resetNonceRef.current }
-    return targetRef.current
-  }, [])
 
   const rinse = useCallback(() => {
     soundRef.current?.resume?.()
@@ -110,7 +112,7 @@ export function useBeaker({ onCommit, maxVolume = 30 }) {
         syncReadout()
       }
     },
-    [syncReadout],
+    [syncReadout, setTargetFromAcc],
   )
 
   const onPourEnd = useCallback(() => {

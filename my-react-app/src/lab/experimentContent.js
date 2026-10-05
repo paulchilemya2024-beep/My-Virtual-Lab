@@ -918,4 +918,409 @@ export const EXPERIMENT_CONTENT = {
       },
     ],
   },
+
+  derivatives: {
+    notes: {
+      sections: [
+        {
+          title: '1. The Problem Calculus Was Invented to Solve',
+          paragraphs: [
+            'You already know how to find the slope of a straight line: pick two points, divide the rise by the run. But most things in the real world do not move in straight lines. A falling stone speeds up. A cooling flask slows its cooling. A beam bends more near its centre. For all of these, the "slope" is different at every single point.',
+            'So here is the question that started calculus: how fast is something changing AT ONE INSTANT, not on average over an interval? A car\'s average speed over two hours tells you nothing about what the speedometer read at the moment it passed you. The derivative is the tool that answers exactly that question.',
+          ],
+        },
+        {
+          title: '2. From Secant to Tangent',
+          paragraphs: [
+            'Start with something you can actually measure. Pick your point x, then step a small distance h away to the point x + h. Draw the straight line joining those two points on the curve. That line is called a SECANT, and its slope is easy to compute: (f(x + h) − f(x)) / h. This fraction is called the difference quotient.',
+            'The secant is only an approximation of the steepness at x, because it averages over the whole gap h. But watch what happens as you shrink h. The second point slides back toward the first, and the secant line pivots. Make h small enough and the secant becomes indistinguishable from the line that just grazes the curve at x — the TANGENT.',
+            'The derivative, written f′(x), is defined as the value the difference quotient approaches as h shrinks to zero. In the lab you will do this physically: drag the h slider down and watch two numbers — the secant slope and the tangent slope — converge onto each other.',
+          ],
+        },
+        {
+          title: '3. The Derivative Is Itself a Function',
+          paragraphs: [
+            'This is the idea students most often miss. f′(x) is not one number. Every position x has its own tangent with its own slope, so the derivative produces a whole new curve — one that reports the steepness of the original at every point.',
+            'In the lab the lower graph starts almost blank and fills in as you sweep the point across the upper one. Each place you visit contributes one value to the curve below. By the time you have swept the whole range you will have drawn f′ by hand, one tangent at a time.',
+            'Reading the lower graph tells you about the upper one without looking at it. Where f′ is positive, f is climbing. Where f′ is negative, f is falling. And where f′ crosses zero, f has levelled off — a peak, a trough, or a moment of pause.',
+          ],
+        },
+        {
+          title: '4. Why Engineers Care',
+          paragraphs: [
+            'Derivatives are how any rate of change gets computed. Position differentiates to velocity, and velocity differentiates again to acceleration — which, multiplied by mass, gives the force a structure must withstand. Every crash-safety calculation runs through this chain.',
+            'Because f′ = 0 marks the peaks and troughs, differentiation is also the standard tool for optimisation: the least material for a required strength, the shape with the lowest drag, the operating temperature with the highest yield. Engineers do not guess at these — they differentiate and solve for zero.',
+            'One curve in this lab deserves special attention: e^(−x/2). Its derivative is a scaled copy of itself, meaning its rate of change is proportional to its current value. That property describes the flask cooling in your titration lab, the bulb dimming in your circuit lab, a charging capacitor, and a decaying isotope. Four unrelated phenomena, one piece of mathematics.',
+          ],
+        },
+      ],
+      keyTerms: [
+        { term: 'Derivative', def: 'The instantaneous rate of change of a function; the slope of its tangent line at a point. Written f′(x) or dy/dx.' },
+        { term: 'Tangent line', def: 'The straight line that touches a curve at one point and matches its direction there.' },
+        { term: 'Secant line', def: 'A straight line cutting a curve at two points. Its slope approximates the derivative, and becomes exact as the two points merge.' },
+        { term: 'Difference quotient', def: 'The fraction (f(x + h) − f(x)) / h — the slope of the secant, and the expression whose limit defines the derivative.' },
+        { term: 'Limit', def: 'The value an expression approaches as its input approaches something, even if it never arrives there exactly.' },
+        { term: 'Stationary point', def: 'A point where f′(x) = 0 and the tangent is horizontal — a maximum, minimum or point of inflection.' },
+        { term: 'Increasing / decreasing', def: 'A function is increasing where f′ > 0 and decreasing where f′ < 0.' },
+      ],
+    },
+    questions: [
+      {
+        type: 'mc',
+        prompt: 'What does f′(x) tell you about the graph of f at the point x?',
+        options: [
+          { text: 'The height of the curve at that point', correct: false },
+          { text: 'The slope of the tangent line at that point', correct: true },
+          { text: 'The area underneath the curve up to that point', correct: false },
+          { text: 'The distance from that point to the x-axis', correct: false },
+        ],
+        explanation: 'The derivative measures steepness, not height. f(x) gives the height; f′(x) gives the slope of the tangent there.',
+      },
+      {
+        type: 'mc',
+        prompt: 'In the expression (f(x + h) − f(x)) / h, what happens as h shrinks toward zero?',
+        options: [
+          { text: 'It approaches zero, because the numerator vanishes', correct: false },
+          { text: 'It becomes undefined and has no useful value', correct: false },
+          { text: 'It approaches the slope of the tangent line at x', correct: true },
+          { text: 'It approaches the value of f(x) itself', correct: false },
+        ],
+        explanation: 'Both the numerator and denominator shrink toward zero, but their RATIO settles on a definite value — the tangent slope. That limiting value is the definition of the derivative.',
+      },
+      {
+        type: 'tf',
+        prompt: 'If f′(x) is negative at some point, the function is falling there.',
+        answer: true,
+        explanation: 'A negative slope means the tangent points downward as you move right, so the function is decreasing at that point.',
+      },
+      {
+        type: 'mc',
+        prompt: 'You traced the derivative of f(x) = x² and found it crossed zero exactly at x = 0. What does that tell you about the parabola?',
+        options: [
+          { text: 'The parabola has a hole at x = 0', correct: false },
+          { text: 'The parabola is at its lowest point, with a flat tangent, at x = 0', correct: true },
+          { text: 'The parabola is steepest at x = 0', correct: false },
+          { text: 'The parabola is undefined at x = 0', correct: false },
+        ],
+        explanation: 'f′ = 0 means a horizontal tangent. For x² that happens at the vertex — the minimum of the curve.',
+      },
+      {
+        type: 'tf',
+        prompt: 'The derivative of a function is always a single fixed number.',
+        answer: false,
+        explanation: 'The derivative is a FUNCTION. Each x has its own tangent slope, so f′ is a whole new curve — which is exactly what you traced out in the lower pane.',
+      },
+      {
+        type: 'short',
+        prompt: 'In the lab you shrank the secant gap h and watched two numbers converge. Describe what you saw, and explain why that convergence is the definition of the derivative.',
+        modelAnswer: 'With a large h, the secant line cut the curve at two clearly separate points and its slope was noticeably different from the tangent slope, because it averaged the steepness across the whole gap. As I dragged h down toward zero, the second point slid back along the curve, the secant pivoted, and its slope moved steadily closer to the tangent slope until the two readings agreed to several decimal places. That is precisely the definition: the derivative is the value the difference quotient approaches as h tends to zero. The secant is something you can actually measure at any finite h; the tangent is the limit it converges on.',
+      },
+      {
+        type: 'short',
+        prompt: 'The curve e^(−x/2) has a derivative that is just a scaled copy of the original curve. Name one real system that behaves this way and explain what that property means physically.',
+        modelAnswer: 'A hot flask cooling toward room temperature behaves this way (so does a discharging capacitor, or a decaying radioactive sample). The property means the rate of change at any moment is proportional to the amount still present: a flask that is far above room temperature loses heat quickly, and as the gap closes the cooling slows down. Physically that produces a curve which drops steeply at first and then flattens out, approaching the final value without ever quite reaching it.',
+      },
+    ],
+  },
+
+  riemann: {
+    notes: {
+      sections: [
+        {
+          title: '1. The Problem With No Shortcut',
+          paragraphs: [
+            'You already know how to find the area of a rectangle, a triangle, even a trapezoid — straight edges have formulas you learned long before calculus. But what about the area trapped between a curved line and the x-axis? There is no shape in your geometry toolkit whose formula fits a parabola or a sine wave exactly.',
+            'So mathematicians did something very practical: when the exact shape is too awkward, approximate it with shapes that are not awkward. Slice the region into thin vertical strips, replace each curved top with a flat one, and you have turned one hard problem into a pile of easy ones — a handful of plain rectangles, each with a width and a height you can read straight off the graph.',
+          ],
+        },
+        {
+          title: '2. The Riemann Sum',
+          paragraphs: [
+            'Split the interval from a to b into n equal strips, each of width Δx = (b − a) / n. For every strip, pick a height — sampled at the left edge, the right edge, or the midpoint — and multiply by the width. Add up all n rectangles and you get a single number: an honest, checkable estimate of the true area. This total is called a Riemann sum.',
+            'No single choice of sample point is "cheating." Left and right sampling are both legitimate estimates; they simply make opposite errors on a rising or falling curve. Midpoint sampling tends to do better because the strip typically overshoots on one side and undershoots on the other, so the two errors largely cancel. The trapezoid method does something slightly different again: instead of a flat top, it draws a straight slanted line across each strip — in effect averaging the left and right heights — which also cancels most of the error.',
+          ],
+        },
+        {
+          title: '3. From a Sum to an Integral',
+          paragraphs: [
+            'A Riemann sum with four or five strips is a rough estimate — the flat tops leave visible gaps against the curve. But nothing stops you from using forty strips, or four thousand. As n grows, each strip gets thinner, the flat-top error shrinks, and the sum homes in on a single exact value.',
+            'That limiting value — what the sum approaches as the number of strips tends to infinity — is called the definite integral, written ∫ₐᵇ f(x) dx. The curly symbol is, quite literally, a stretched-out S for "sum." An integral is not a different idea from a Riemann sum; it is what a Riemann sum becomes once you stop settling for an approximation.',
+          ],
+        },
+        {
+          title: '4. The Accumulation Function and the Big Reveal',
+          paragraphs: [
+            'Nothing says the right-hand endpoint of your interval has to stay fixed. Let it slide — call its position x — and at every position measure the running total collected so far. That running total is itself a function of x, usually written A(x), called the accumulation function.',
+            'Here is the single most important fact in this entire unit. If you differentiate A(x) — find its own rate of change — you get back f(x) exactly, the very function you were integrating in the first place. This is the Fundamental Theorem of Calculus: A′(x) = f(x). Integration and differentiation are not two separate skills to memorise independently; they are inverse operations, the same relationship addition has with subtraction.',
+            'The clearest everyday picture of this is a car. The speedometer shows velocity — a rate. The odometer shows total distance — an accumulation of that rate over time. The Fundamental Theorem is the statement that the odometer’s own rate of change, at any instant, is exactly what the speedometer reads at that instant. You cannot have one without implying the other.',
+          ],
+        },
+      ],
+      keyTerms: [
+        { term: 'Riemann sum', def: 'An approximation to the area under a curve, found by adding up the areas of thin rectangles (or trapezoids) that fit under it.' },
+        { term: 'Definite integral', def: 'The exact value a Riemann sum approaches as the number of strips tends to infinity, written ∫ₐᵇ f(x) dx.' },
+        { term: 'Left / right / midpoint sum', def: 'A Riemann sum whose rectangle heights are sampled at the left edge, right edge, or midpoint of each strip.' },
+        { term: 'Trapezoid rule', def: 'A Riemann sum that replaces each flat rectangle top with a straight slanted line — equivalent to averaging the left and right heights.' },
+        { term: 'Accumulation function', def: 'The running-total function A(x) = ∫ₐˣ f(t) dt, built by letting the right-hand endpoint of integration slide.' },
+        { term: 'Fundamental Theorem of Calculus', def: "The statement that A′(x) = f(x): differentiating the accumulation function returns the original function exactly." },
+      ],
+    },
+    questions: [
+      {
+        type: 'mc',
+        prompt: 'Why do mathematicians approximate the area under a curve with rectangles instead of computing it directly?',
+        options: [
+          { text: 'Rectangles are always more accurate than the true area', correct: false },
+          { text: 'There is no general formula for the area under an arbitrary curved line, but rectangle areas are easy to compute', correct: true },
+          { text: 'Curves do not actually have a well-defined area', correct: false },
+          { text: 'It is a historical tradition with no mathematical reason', correct: false },
+        ],
+        explanation: 'Straight-edged shapes have formulas you already know. A curved boundary has no such shortcut, so the practical move is to replace it with many flat-topped strips whose areas you CAN compute exactly.',
+      },
+      {
+        type: 'tf',
+        prompt: 'At the same number of strips n, the midpoint Riemann sum is generally more accurate than the left or right sum.',
+        answer: true,
+        explanation: 'Left and right sums each make a one-sided error on a rising or falling curve. Sampling at the midpoint causes the overshoot on one side and the undershoot on the other to mostly cancel.',
+      },
+      {
+        type: 'mc',
+        prompt: 'As the number of strips n in a Riemann sum tends to infinity, the sum approaches:',
+        options: [
+          { text: 'Zero, because each individual strip shrinks to nothing', correct: false },
+          { text: 'Infinity, because there are infinitely many strips', correct: false },
+          { text: 'The exact definite integral of the function', correct: true },
+          { text: 'A different value depending only on n, with no fixed limit', correct: false },
+        ],
+        explanation: 'Each strip shrinking does not make the TOTAL area shrink — the number of strips grows to compensate. The sum settles on a single exact value: the definite integral.',
+      },
+      {
+        type: 'mc',
+        prompt: 'The accumulation function A(x) is built by:',
+        options: [
+          { text: 'Measuring the slope of f at every point x', correct: false },
+          { text: 'Letting the right-hand endpoint of integration slide, and recording the running total at each position', correct: true },
+          { text: 'Averaging the values of f over its whole domain', correct: false },
+          { text: 'Finding where f crosses the x-axis', correct: false },
+        ],
+        explanation: 'A(x) answers "how much area has been collected from the fixed left edge up to this particular x" — a running total, not a slope or an average.',
+      },
+      {
+        type: 'tf',
+        prompt: 'The Fundamental Theorem of Calculus says that differentiating the accumulation function A(x) gives back the original function f(x).',
+        answer: true,
+        explanation: 'A′(x) = f(x). Differentiation and integration are inverse operations — exactly the relationship the lab showed by overlaying A′(x) directly on top of f(x).',
+      },
+      {
+        type: 'short',
+        prompt: 'In the lab you pushed n higher and watched the Riemann sum settle on the exact area. Explain why a larger n makes the approximation better, using the word "gap."',
+        modelAnswer: 'Each rectangle has a flat top, but the curve itself is not flat, so there is always a small gap between the rectangle’s top and the curve somewhere inside each strip. As n increases, every strip gets narrower, so the curve has less room to deviate from flat within that strip — the gap in each one shrinks. With many thousands of narrow strips, the total area left uncovered (or double-covered) by all those small gaps becomes negligible, and the sum converges on the exact value.',
+      },
+      {
+        type: 'short',
+        prompt: 'Using the speedometer-and-odometer picture from the notes, explain in your own words what the Fundamental Theorem of Calculus actually says.',
+        modelAnswer: 'The speedometer shows how fast the car is going right now — a rate, which is what differentiation measures. The odometer shows the total distance accumulated so far — a running sum, which is what integration measures. The Fundamental Theorem says these two readings are never independent: the odometer’s own instantaneous rate of change, at any moment, is exactly whatever the speedometer reads at that same moment. Differentiating the accumulated total always gives back the original rate, which is why integration and differentiation are described as inverse operations rather than two unrelated techniques.',
+      },
+    ],
+  },
+
+  'derivative-rules': {
+    notes: {
+      sections: [
+        {
+          title: '1. Why a Sum Rule Is Not Enough',
+          paragraphs: [
+            'Differentiating a sum is easy: differentiate each piece and add the results. It is tempting to assume multiplication works the same way — that the derivative of w times h is simply w-prime times h-prime. It is not. You can see why with a simple picture: a rectangle whose width and height are BOTH growing as x increases. Its area grows too, but the growth is not a simple sum of two independent effects, because the two dimensions are changing together, not apart.',
+          ],
+        },
+        {
+          title: '2. The Product Rule, Built From a Growing Rectangle',
+          paragraphs: [
+            'Step x forward by a small amount, Δx. The rectangle’s new area splits into exactly three new pieces: a tall right-hand sliver of area h·Δw, a wide top sliver of area w·Δh, and a tiny corner piece of area Δw·Δh where both changes overlap.',
+            'Divide everything by Δx and let Δx shrink toward zero. The first two pieces settle on definite values: h·(dw/dx) and w·(dh/dx). The corner piece, however, is proportional to Δx TIMES ANOTHER Δx — it shrinks roughly as the SQUARE of the step size, far faster than the other two terms, which shrink only as Δx itself. In the limit, the corner contributes nothing, and what survives is the product rule: (w·h)′ = w′·h + w·h′.',
+            'Notice the shape of the result: differentiate the first factor and multiply by the second, PLUS the first factor multiplied by the derivative of the second. Every product-rule calculation has exactly this two-term shape.',
+          ],
+        },
+        {
+          title: '3. Functions Built Inside Other Functions',
+          paragraphs: [
+            'A different kind of combination shows up constantly: one function fed into another. If u = g(x) and y = f(u), then y is a function of x only indirectly, through u. This is called a composite function, written y = f(g(x)).',
+            'Picture three linked dials. The first spins at a steady pace — this represents x itself, marching forward. It drives a second dial, whose speed depends on how fast u responds to x — that is g′(x). The second dial drives a third, whose speed depends on how fast y responds to u — that is f′(u). The overall speed of that final dial, relative to the very first one, is not the SUM of the two individual rates. It is their PRODUCT.',
+          ],
+        },
+        {
+          title: '4. The Chain Rule',
+          paragraphs: [
+            'The chain rule states this precisely: if y = f(g(x)), then dy/dx = f′(g(x)) · g′(x). Differentiate the outer function, but evaluate that derivative at the INNER function’s value — then multiply by the inner function’s own derivative.',
+            'The gear-train picture is exactly why the rates multiply rather than add: each dial’s speed, relative to the one before it, is a separate ratio, and chaining ratios together means multiplying them, the same way gearing a bicycle through two sets of sprockets multiplies the two gear ratios rather than adding them.',
+            'Both rules in this lab were confirmed the identical way: compute the derivative directly from the whole combined function, with no shortcut — this is the "ground truth." Then compute it again using only the rule, built from the separate derivatives of the pieces. If the rule is correct, those two completely independent calculations land on exactly the same curve, everywhere — not as a coincidence, but because the rule is simply what the direct calculation always reduces to.',
+          ],
+        },
+      ],
+      keyTerms: [
+        { term: 'Product rule', def: 'The differentiation rule for a product of two functions: (w·h)′ = w′·h + w·h′.' },
+        { term: 'Composite function', def: 'A function built by feeding the output of one function into another, written f(g(x)).' },
+        { term: 'Chain rule', def: 'The differentiation rule for a composite function: if y = f(g(x)), then dy/dx = f′(g(x))·g′(x).' },
+        { term: 'Inner function / outer function', def: 'In f(g(x)), g is the inner function (applied first) and f is the outer function (applied to g’s result).' },
+        { term: 'Ground truth (in this lab)', def: 'The derivative of a combined function computed directly, with no rule applied — used to check that a rule gives the same answer.' },
+      ],
+    },
+    questions: [
+      {
+        type: 'mc',
+        prompt: 'A rectangle’s width and height are both increasing as x increases. Which statement about its area’s rate of change is correct?',
+        options: [
+          { text: 'It equals the width’s rate of change plus the height’s rate of change', correct: false },
+          { text: 'It equals the width’s rate of change times the height’s rate of change', correct: false },
+          { text: 'It equals (rate of width change × current height) + (current width × rate of height change)', correct: true },
+          { text: 'It cannot be determined without knowing the exact functions', correct: false },
+        ],
+        explanation: 'This is the product rule: (w·h)′ = w′·h + w·h′. Each term pairs ONE quantity’s rate of change with the OTHER quantity’s current value.',
+      },
+      {
+        type: 'tf',
+        prompt: 'In the growing-rectangle picture, the corner piece (Δw·Δh) shrinks at the same rate as the other two pieces as Δx shrinks.',
+        answer: false,
+        explanation: 'The corner piece is proportional to Δx multiplied by ANOTHER Δx, so it shrinks roughly as Δx² — much faster than the other two pieces, which shrink only as Δx. That is exactly why it drops out of the rule in the limit.',
+      },
+      {
+        type: 'mc',
+        prompt: 'If y = f(g(x)), the chain rule says dy/dx equals:',
+        options: [
+          { text: 'f′(x) · g′(x)', correct: false },
+          { text: 'f′(g(x)) · g′(x)', correct: true },
+          { text: 'f(g′(x))', correct: false },
+          { text: 'f′(x) + g′(x)', correct: false },
+        ],
+        explanation: 'The outer function’s derivative must be evaluated AT g(x) — the inner function’s value — not at x itself. Then multiply by the inner function’s own derivative.',
+      },
+      {
+        type: 'tf',
+        prompt: 'In the gear-train picture, the final dial’s overall speed relative to the first dial is the SUM of the two individual gear rates.',
+        answer: false,
+        explanation: 'Chaining two rates together means multiplying them, not adding them — the same way two gear ratios in sequence multiply, just as the chain rule multiplies f′(g(x)) by g′(x).',
+      },
+      {
+        type: 'mc',
+        prompt: 'In the lab, how was the product rule actually confirmed to be correct, rather than just asserted?',
+        options: [
+          { text: 'By looking it up in a textbook', correct: false },
+          { text: 'By computing the derivative of the whole area function directly, and separately from the rule, and showing the two curves coincide everywhere', correct: true },
+          { text: 'By checking that it worked at a single value of x', correct: false },
+          { text: 'It was simply assumed to be true', correct: false },
+        ],
+        explanation: 'The lab computed A′(x) two completely independent ways — direct numerical differentiation of the whole function, and the product-rule formula built from the separate pieces — and showed they trace the same curve across the entire range.',
+      },
+      {
+        type: 'short',
+        prompt: 'Explain, using the words "Δx" and "shrink," why the corner piece in the product-rule picture disappears in the limit while the other two pieces do not.',
+        modelAnswer: 'The two surviving pieces — h·Δw and w·Δh — each contain exactly one factor that shrinks as Δx shrinks (Δw and Δh are each proportional to Δx), so dividing by Δx leaves a finite, nonzero value in the limit. The corner piece, Δw·Δh, contains TWO such shrinking factors multiplied together, so it is proportional to Δx², which shrinks far faster than Δx itself. Dividing it by Δx still leaves a factor of Δx remaining, which goes to zero as Δx shrinks to zero — so the corner contributes nothing to the final derivative.',
+      },
+      {
+        type: 'short',
+        prompt: 'Using the three-dial picture from the notes, explain in your own words why the chain rule multiplies the two rates instead of adding them.',
+        modelAnswer: 'Each dial’s speed is described relative to the dial driving it, as a RATIO — the middle dial spins at g′(x) times the speed of the first, and the outer dial spins at f′(u) times the speed of the middle one. To find the outer dial’s speed relative to the very first dial, you have to chain those two ratios together, and chaining ratios in sequence means multiplying them: if the middle dial is twice as fast as the first, and the outer dial is three times as fast as the middle one, the outer dial is six times as fast as the first — not five. That multiplicative chaining of ratios is exactly what the chain rule’s f′(g(x))·g′(x) expresses.',
+      },
+    ],
+  },
+
+  limits: {
+    notes: {
+      sections: [
+        {
+          title: '1. Approaching a Point Without Landing On It',
+          paragraphs: [
+            'Picture two values sneaking up on x = a — one from below, one from above — and watch what f(x) does at each one. If both sides are closing in on the very same number as they get arbitrarily close to a, that shared number is called the LIMIT of f as x approaches a, written lim(x→a) f(x) = L.',
+            'This is a statement about the APPROACH, not about what happens exactly at a. A limit can exist, and have a perfectly definite value, even if the function itself is undefined at that exact point, or defined to be something completely different. That distinction — the limit versus the function’s actual value — is the single most important idea in this unit.',
+          ],
+        },
+        {
+          title: '2. Zooming Reveals What Kind of Point It Is',
+          paragraphs: [
+            'The cleanest way to see what is really happening at a point is to zoom in on it — uniformly, shrinking the window on both axes together, centred exactly on the point. A smooth, well-behaved function does something remarkable under this zoom: it flattens. Zoom in far enough on any point of a smooth curve and it becomes indistinguishable from a single straight line. That flattening property has a name — it is what the next unit will call being DIFFERENTIABLE at that point.',
+            'Not every function flattens. A removable discontinuity (a "hole") zooms into a perfectly straight line with one point excluded — the limit exists, drawn as an open circle. A jump discontinuity keeps a visible gap between two pieces at every level of zoom, no matter how far you push in — the left and right limits simply disagree. And an infinite discontinuity never settles at all; the curve keeps running off the top or bottom of the frame however far you zoom, because the function is genuinely unbounded there.',
+          ],
+        },
+        {
+          title: '3. Reading a Discontinuity From the Evidence',
+          paragraphs: [
+            'You do not need to be told which kind of point you are looking at — you can work it out from three numbers: the left-hand limit, the right-hand limit, and the function’s actual value at the point (if it has one). If the two one-sided limits disagree, it is a jump. If they agree but the function is undefined there, or defined to something else, it is a hole. If either side runs away toward infinity instead of settling on a number, it is an infinite discontinuity.',
+          ],
+        },
+        {
+          title: '4. Continuity: Three Conditions, All At Once',
+          paragraphs: [
+            'A function is CONTINUOUS at a point a when three separate things are all true together: the limit exists (left and right agree), f(a) is actually defined, and f(a) equals that limit exactly — not merely close to it. Break any one of those three and the function is discontinuous at that point, in one of the three ways this unit has covered.',
+            'This matters beyond its own definition. Every differentiation rule in the units ahead — the tangent line, the product rule, the chain rule — silently assumes you are standing on a point exactly this well-behaved. A rule built for a smooth, continuous point simply does not apply at a hole, a jump, or an asymptote. Checking continuity first is not a formality; it is the condition the rest of calculus is built on top of.',
+          ],
+        },
+      ],
+      keyTerms: [
+        { term: 'Limit', def: 'The single value a function approaches as its input gets arbitrarily close to a point, from one or both sides — written lim(x→a) f(x).' },
+        { term: 'One-sided limit', def: 'The value a function approaches from only the left (x → a⁻) or only the right (x → a⁺) of a point.' },
+        { term: 'Removable discontinuity', def: 'A point where the limit exists but the function is undefined there, or defined to a different value — drawn as an open circle, a "hole".' },
+        { term: 'Jump discontinuity', def: 'A point where the left-hand and right-hand limits both exist but disagree, so no single two-sided limit exists.' },
+        { term: 'Infinite discontinuity', def: 'A point where a one-sided (or both-sided) limit is unbounded — the function runs off toward +∞ or −∞ rather than approaching a finite value.' },
+        { term: 'Continuity at a point', def: 'The condition that the limit exists, the function is defined there, and the two are equal — all three at once.' },
+        { term: 'Differentiable', def: "Informally: a point smooth enough that zooming in far enough makes the curve look like a straight line. Introduced properly in the derivative unit." },
+      ],
+    },
+    questions: [
+      {
+        type: 'mc',
+        prompt: 'What does it mean for lim(x→a) f(x) to equal L?',
+        options: [
+          { text: 'f(a) is exactly equal to L', correct: false },
+          { text: 'As x gets arbitrarily close to a from either side, f(x) gets arbitrarily close to L', correct: true },
+          { text: 'f is defined everywhere near a', correct: false },
+          { text: 'L is the largest value f ever takes', correct: false },
+        ],
+        explanation: 'A limit describes the approach, not necessarily the destination — f(x) closing in on L as x closes in on a, regardless of what (if anything) f actually does exactly at a.',
+      },
+      {
+        type: 'tf',
+        prompt: 'A limit can exist at a point even if the function itself is undefined there.',
+        answer: true,
+        explanation: 'This is exactly the removable-discontinuity case: (x²−4)/(x−2) is undefined at x = 2 (division by zero), but its limit there is 4, because the formula behaves like x + 2 everywhere else nearby.',
+      },
+      {
+        type: 'mc',
+        prompt: 'At a jump discontinuity, what is specifically true?',
+        options: [
+          { text: 'The function is undefined at that point', correct: false },
+          { text: 'The left-hand and right-hand limits both exist, but they disagree with each other', correct: true },
+          { text: 'The function approaches infinity from at least one side', correct: false },
+          { text: 'The function is perfectly continuous there', correct: false },
+        ],
+        explanation: 'Both one-sided limits exist at a jump — they just do not agree, so there is no single two-sided limit. That is different from a hole (where both sides DO agree) and an infinite discontinuity (where a side does not settle on any finite number at all).',
+      },
+      {
+        type: 'tf',
+        prompt: 'Zooming in uniformly on an infinite discontinuity will eventually reveal a finite value, the same way zooming in on a hole reveals one.',
+        answer: false,
+        explanation: 'An infinite discontinuity is genuinely unbounded — the curve keeps running off the top or bottom of the frame at every level of zoom. A hole, by contrast, sits on an otherwise ordinary straight line and zooming does reveal a definite finite value nearby.',
+      },
+      {
+        type: 'mc',
+        prompt: 'Which THREE conditions, all holding at once, define continuity of f at a point a?',
+        options: [
+          { text: 'f is increasing, f is positive, and f is bounded', correct: false },
+          { text: 'The limit exists, f(a) is defined, and f(a) equals that limit', correct: true },
+          { text: 'f has a maximum, a minimum, and no asymptotes', correct: false },
+          { text: 'f is a polynomial, f is smooth, and f is one-to-one', correct: false },
+        ],
+        explanation: 'All three must hold together: the two-sided limit exists, the function value at the point actually exists, and the two match exactly — not approximately.',
+      },
+      {
+        type: 'short',
+        prompt: 'Explain why a smooth function "flattening" under zoom is connected to the idea of differentiability, which you will meet properly in the next unit.',
+        modelAnswer: 'Differentiability at a point means the function has one single, well-defined tangent slope there — and a tangent line is, by definition, straight. If you zoom in far enough on a point and the curve keeps looking more and more like a single straight line, that straight line IS the tangent, and its slope is the derivative. Functions with a hole, a jump, or an asymptote never settle into looking like one straight line under zoom — a hole still shows a straight line but with a point missing, a jump never closes its gap, and an asymptote never stops shooting off the screen — which is exactly why none of those points are differentiable: there is no single well-behaved tangent slope to find there.',
+      },
+      {
+        type: 'short',
+        prompt: 'You are given a new function and told its left-hand limit at some point a is 3, its right-hand limit is 3, and f(a) = 5. Classify the discontinuity at a and explain your reasoning.',
+        modelAnswer: 'This is a removable discontinuity — a hole. Both one-sided limits exist and agree (both equal 3), which means the two-sided limit exists and equals 3. However, the function is defined at that point, but to a DIFFERENT value — f(a) = 5, not 3. Since the limit exists but does not match the function’s actual value there, the function fails the third condition for continuity (f(a) must equal the limit), even though the first two conditions (the limit existing, and f(a) being defined) are both satisfied.',
+      },
+    ],
+  },
 }

@@ -18,7 +18,7 @@ const experimentSchema = new mongoose.Schema(
     title: { type: String, required: true },
     subject: {
       type: String,
-      enum: ['chemistry', 'physics', 'biology'],
+      enum: ['chemistry', 'physics', 'biology', 'mathematics'],
       required: true,
     },
     difficulty: { type: Number, min: 1, max: 5, default: 1 },
